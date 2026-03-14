@@ -1,17 +1,19 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
-import OpenAI from "openai";
+// import OpenAI from "openai";
 import cors from 'cors';
-import type {ChatCompletionMessageParam} from "openai/resources/chat/completions";
+// import type {ChatCompletionMessageParam} from "openai/resources/chat/completions";
 import process from 'process';
 import * as mysql from 'mysql2/promise';
 import {sendResult, sendError} from './response.js';
+import chatRouter from './chat.js';
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/chat',chatRouter)
 const PORT = process.env.PORT;
 const CONSOLE_OPEN = process.env.CONSOLE_OPEN;
 const MYSQL_PORT = 30768;
@@ -20,11 +22,10 @@ const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
 const MYSQL_HOST = "43.134.234.229";
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
 
-const openai = new OpenAI({
-    apiKey: process.env.DASHSCOPE_API_KEY, // 从环境变量读取
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
-});
-let isAnswering = false;
+// const openai = new OpenAI({
+//     apiKey: process.env.DASHSCOPE_API_KEY, // 从环境变量读取
+//     baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+// });
 
 interface DBconfig {
     host: string;
@@ -128,103 +129,104 @@ app.listen(PORT, () => {
 //
 // main();
 
-type ReasoningDelta = {
-    content?: string | null,
-    reasoning_content?: string | null
-}
-app.post('/chat', async (req, res) => {
-    try {
-        const userMessage = req.body?.message;
+// type ReasoningDelta = {
+//     content?: string | null,
+//     reasoning_content?: string | null
+// }
 
-        if (!userMessage || typeof userMessage !== 'string') {
-            return res.status(400).json({ error: 'message 必填，且必须是字符串' });
-        }
-
-        const messages: ChatCompletionMessageParam[] = [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            { role: 'user', content: userMessage }
-        ];
-
-        const completion = await openai.chat.completions.create({
-            model: 'qwen3.5-flash',
-            messages,
-            // @ts-ignore
-            extra_body: {
-                enable_thinking: true
-            }
-        });
-
-        const text = completion.choices?.[0]?.message?.content ?? '';
-
-        return res.json({
-            ok: true,
-            model: completion.model,
-            content: text,
-            raw: completion
-        });
-    } catch (error: any) {
-        console.error(error);
-        return res.status(500).json({
-            ok: false,
-            error: error?.message || 'server error'
-        });
-    }
-});
-
-app.post('/chat/stream', async (req, res) => {
-    try {
-        const userMessage = req.body?.message;
-
-        if (!userMessage || typeof userMessage !== 'string') {
-            return res.status(400).json({ error: 'message 必填，且必须是字符串' });
-        }
-
-        const messages: ChatCompletionMessageParam[] = [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            { role: 'user', content: userMessage }
-        ];
-
-        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-        res.setHeader('Cache-Control', 'no-cache, no-transform');
-        res.setHeader('Connection', 'keep-alive');
-
-        // @ts-ignore
-        const stream = await openai.chat.completions.create({
-            model: 'qwen3.5-flash',
-            messages,
-            stream: true,
-            extra_body: {
-                enable_thinking: true
-            }
-        });
-
-        for await (const chunk of stream) {
-            const delta = chunk.choices?.[0]?.delta as ReasoningDelta | undefined;
-            if (!delta) continue;
-
-            if (delta.reasoning_content) {
-                res.write(`data: ${JSON.stringify({
-                    type: 'reasoning',
-                    content: delta.reasoning_content
-                })}\n\n`);
-            }
-
-            if (delta.content) {
-                res.write(`data: ${JSON.stringify({
-                    type: 'content',
-                    content: delta.content
-                })}\n\n`);
-            }
-        }
-
-        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-        res.end();
-    } catch (error: any) {
-        console.error(error);
-        res.write(`data: ${JSON.stringify({
-            type: 'error',
-            error: error?.message || 'server error'
-        })}\n\n`);
-        res.end();
-    }
-});
+// app.post('/chat', async (req, res) => {
+//     try {
+//         const userMessage = req.body?.message;
+//
+//         if (!userMessage || typeof userMessage !== 'string') {
+//             return res.status(400).json({ error: 'message 必填，且必须是字符串' });
+//         }
+//
+//         const messages: ChatCompletionMessageParam[] = [
+//             { role: 'system', content: 'You are a helpful assistant.' },
+//             { role: 'user', content: userMessage }
+//         ];
+//
+//         const completion = await openai.chat.completions.create({
+//             model: 'qwen3.5-flash',
+//             messages,
+//             // @ts-ignore
+//             extra_body: {
+//                 enable_thinking: true
+//             }
+//         });
+//
+//         const text = completion.choices?.[0]?.message?.content ?? '';
+//
+//         return res.json({
+//             ok: true,
+//             model: completion.model,
+//             content: text,
+//             raw: completion
+//         });
+//     } catch (error: any) {
+//         console.error(error);
+//         return res.status(500).json({
+//             ok: false,
+//             error: error?.message || 'server error'
+//         });
+//     }
+// });
+//
+// app.post('/chat/stream', async (req, res) => {
+//     try {
+//         const userMessage = req.body?.message;
+//
+//         if (!userMessage || typeof userMessage !== 'string') {
+//             return res.status(400).json({ error: 'message 必填，且必须是字符串' });
+//         }
+//
+//         const messages: ChatCompletionMessageParam[] = [
+//             { role: 'system', content: 'You are a helpful assistant.' },
+//             { role: 'user', content: userMessage }
+//         ];
+//
+//         res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+//         res.setHeader('Cache-Control', 'no-cache, no-transform');
+//         res.setHeader('Connection', 'keep-alive');
+//
+//         // @ts-ignore
+//         const stream = await openai.chat.completions.create({
+//             model: 'qwen3.5-flash',
+//             messages,
+//             stream: true,
+//             extra_body: {
+//                 enable_thinking: true
+//             }
+//         });
+//
+//         for await (const chunk of stream) {
+//             const delta = chunk.choices?.[0]?.delta as ReasoningDelta | undefined;
+//             if (!delta) continue;
+//
+//             if (delta.reasoning_content) {
+//                 res.write(`data: ${JSON.stringify({
+//                     type: 'reasoning',
+//                     content: delta.reasoning_content
+//                 })}\n\n`);
+//             }
+//
+//             if (delta.content) {
+//                 res.write(`data: ${JSON.stringify({
+//                     type: 'content',
+//                     content: delta.content
+//                 })}\n\n`);
+//             }
+//         }
+//
+//         res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+//         res.end();
+//     } catch (error: any) {
+//         console.error(error);
+//         res.write(`data: ${JSON.stringify({
+//             type: 'error',
+//             error: error?.message || 'server error'
+//         })}\n\n`);
+//         res.end();
+//     }
+// });
