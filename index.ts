@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
 import * as mysql from 'mysql2/promise';
+import {sendResult, sendError} from "./src/response";
 
 dotenv.config();
 
@@ -51,15 +52,23 @@ class DB {
         }
         return [];
     }
-
 }
 
-app.get('/mysqltry', async (req, res) => {
-    console.log(generateDBconfig());
-    const db = new DB(generateDBconfig());
-    const jsonText = await db.query("select * from test0314 where id != ?;", [2]);
-    console.log(jsonText)
-    res.json(JSON.stringify(jsonText));
+app.post('/sql', async (req: any, res: any) => {
+    const {body} = req.body;
+    if (body == null) return sendError(res, "POST请求无数据", 400);
+    const sql: string = body.sql;
+    if (sql == null) return sendError(res, "POST请求sql语句为空", 400);
+    const params: string[] | number[] = body.params;
+    try {
+        const db = new DB(generateDBconfig());
+        const jsonText = await db.query(sql, params);
+        console.log(jsonText);
+        sendResult(res, jsonText);
+    } catch (error) {
+        console.error(error.message);
+        sendError(res)
+    }
 })
 
 app.listen(PORT, () => {
