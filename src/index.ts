@@ -1,7 +1,8 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
 import * as mysql from 'mysql2/promise';
-import {sendResult, sendError} from './response.js';
+// @ts-ignore
+import {sendResult, sendError} from './response.ts';
 
 dotenv.config();
 
