@@ -1,4 +1,4 @@
-import {Response} from 'express';
+import type {Response} from 'express';
 
 /**
  * 统一的输出格式:
