@@ -1,5 +1,8 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
+import OpenAI from "openai";
+import type {ChatCompletionMessageParam} from "openai/resources/chat/completions";
+import process from 'process';
 import * as mysql from 'mysql2/promise';
 import {sendResult, sendError} from './response.js';
 
@@ -14,6 +17,12 @@ const MYSQL_USER = process.env.MYSQL_USER || process.env.MYSQLUSER;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
 const MYSQL_HOST = "43.134.234.229";
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
+
+const openai = new OpenAI({
+    apiKey: process.env.DASHSCOPE_API_KEY, // 从环境变量读取
+    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+});
+let isAnswering = false;
 
 interface DBconfig {
     host: string;
@@ -75,3 +84,44 @@ app.post('/sql', async (req: any, res: any) => {
 app.listen(PORT, () => {
     console.log(`正在监听端口${PORT}`);
 })
+
+// 初始化 openai 客户端
+async function main() {
+    try {
+        const messages: ChatCompletionMessageParam[] = [{
+            role: "system",
+            content: "You are a helpful assistant."
+        }, {role: 'user', content: '你是谁'}];
+        // @ts-ignore
+        const stream = await openai.chat.completions.create({
+            model: 'qwen3.5-flash',
+            messages,
+            stream: true,
+            enable_thinking: true
+        });
+        console.log('\n' + '='.repeat(20) + '思考过程' + '='.repeat(20));
+        type ReasoningDelta = {
+            content?: string | null,
+            reasoning_content?: string | null
+        }
+        for await (const chunk of stream) {
+            const delta = chunk.choices[0].delta as ReasoningDelta;
+            if (delta.reasoning_content !== undefined && delta.reasoning_content !== null) {
+                if (!isAnswering) {
+                    process.stdout.write(delta.reasoning_content);
+                }
+            }
+            if (delta.content !== undefined && delta.content) {
+                if (!isAnswering) {
+                    console.log('\n' + '='.repeat(20) + '完整回复' + '='.repeat(20));
+                    isAnswering = true;
+                }
+                process.stdout.write(delta.content);
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+main();
