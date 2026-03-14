@@ -14,6 +14,7 @@
   "author": "zyx,zby,zzl,wyh etc",
   "type": "module",
   "main": "index.ts",
+  "allowImportingTsExtensions":true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
