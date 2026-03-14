@@ -1,0 +1,26 @@
+{
+  "name": "cdesign-api",
+  "version": "1.0.0",
+  "description": "zby is handsome!!!!!!!!!!",
+  "homepage": "https://github.com/BoyangZhang619/CDesign-api#readme",
+  "bugs": {
+    "url": "https://github.com/BoyangZhang619/CDesign-api/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BoyangZhang619/CDesign-api.git"
+  },
+  "license": "ISC",
+  "author": "zyx,zby,zzl,wyh etc",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mysql2": "^3.19.1"
+  },
+  "keywords": []
+}
