@@ -11,7 +11,7 @@ const CONSOLE_OPEN = process.env.CONSOLE_OPEN;
 const MYSQL_PORT = process.env.MYSQL_PORT || process.env.MYSQLPORT;
 const MYSQL_USER = process.env.MYSQL_USER || process.env.MYSQLUSER;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
-const MYSQL_HOST = process.env.MYSQL_HOST || process.env.MYSQLHOST;
+const MYSQL_HOST = "mysql.zeabur.internal";
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
 
 interface DBconfig {
