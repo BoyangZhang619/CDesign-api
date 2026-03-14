@@ -55,7 +55,7 @@ class DB {
 }
 
 app.post('/sql', async (req: any, res: any) => {
-    const {body} = req.body;
+    const {body} = req;
     if (body == null) return sendError(res, "POST请求无数据", 400);
     const sql: string = body.sql;
     if (sql == null) return sendError(res, "POST请求sql语句为空", 400);
