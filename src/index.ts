@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
 import * as mysql from 'mysql2/promise';
-import {sendResult, sendError} from './src/response.js';
+import {sendResult, sendError} from './response.js';
 
 dotenv.config();
 
@@ -70,6 +70,7 @@ app.post('/sql', async (req: any, res: any) => {
         sendError(res)
     }
 })
+
 
 app.listen(PORT, () => {
     console.log(`正在监听端口${PORT}`);
