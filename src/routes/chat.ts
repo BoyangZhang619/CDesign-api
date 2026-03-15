@@ -29,7 +29,6 @@ type typeLanguage = 'Chinese' | 'English' | 'Japanese' | 'French' | 'German';
 type typeResTextType = 'text' | 'json' | 'markdown' | 'html';
 
 interface META {
-    res: any;
     user_content: string;
     model?: typeModel;
     system_content?: string;
@@ -41,7 +40,7 @@ interface META {
 
 async function dealCommonTextReq(meta: META) {
     try {
-        if (!meta?.user_content || !meta.user_content.length || !meta?.res) throw new Error("用户输入是空的或res无效，传输或者格式问题 in dealCommonTextReq");
+        if (!meta?.user_content || !meta.user_content.length) throw new Error("用户输入是空的或res无效，传输或者格式问题 in dealCommonTextReq");
         const formatInstruction = {
             text: '请仅输出纯文本，不要输出 markdown 符号，不要附加解释。',
             json: '请仅输出合法 JSON，不要输出代码块，不要输出额外说明。',
@@ -90,9 +89,9 @@ async function dealCommonTextReq(meta: META) {
 async function dealCommonReq(req: any, res: any): Promise<any> {
     try {
         const {body} = req;
+        console.log(req);
         if (!body || !body?.message) throw new Error("格式错误，无数据，in dealCommonReq")
         const meta: META = {
-            res,
             user_content: body?.message || '请返回对应输出类型的空值',
             model: body?.model || 'qwen3.5-flash',
             system_content: body?.system_content || '',
