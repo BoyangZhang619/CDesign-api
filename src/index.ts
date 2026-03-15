@@ -16,10 +16,10 @@ app.use(express.json());
 app.use('/chat',chatRouter)
 const PORT = process.env.PORT;
 const CONSOLE_OPEN = process.env.CONSOLE_OPEN;
-const MYSQL_PORT = 30768;
+const MYSQL_PORT = process.env.MYSQL_PORT || process.env.MYSQLPORT;
 const MYSQL_USER = process.env.MYSQL_USER || process.env.MYSQLUSER;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
-const MYSQL_HOST = "43.134.234.229";
+const MYSQL_HOST = process.env.MYSQL_HOST || process.env.MYSQLHOST;
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
 
 // const openai = new OpenAI({
