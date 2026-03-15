@@ -15,6 +15,7 @@ export const sendResult = (
     message: string = "success",
     status: number = 200
 ) => {
+    console.log(`\n\n==========\n运行正常，返回log,HTTP状态码：${status}，log信息：${message}\n==========\n\n`);
     return res.status(status).json({
         success: true,
         message,
@@ -27,8 +28,9 @@ export const sendError = (
     message: string = "error",
     status: number = 500
 ) => {
+    console.error(`\n\n==========\n出现错误，返回error,HTTP状态码：${status}，报错信息：${message}\n==========\n\n`);
     return res.status(status).json({
-        success: true,
+        success: false,
         message,
         data: null
     })
