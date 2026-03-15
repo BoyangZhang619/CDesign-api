@@ -17,7 +17,7 @@ app.use('/chat',chatRouter)
 const PORT = process.env.PORT;
 const CONSOLE_OPEN = process.env.CONSOLE_OPEN;
 const MYSQL_PORT = process.env.MYSQL_PORT || process.env.MYSQLPORT;
-const MYSQL_USER = process.env.MYSQL_USER || process.env.MYSQLUSER;
+const MYSQL_USER = process.env.MYSQL_USERNAME || process.env.MYSQLUSERNAME;
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
 const MYSQL_HOST = process.env.MYSQL_HOST || process.env.MYSQLHOST;
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
@@ -85,9 +85,9 @@ app.post('/sql', async (req: any, res: any) => {
 })
 
 
-app.listen(PORT, () => {
-    console.log(`正在监听端口${PORT}`);
-})
+// app.listen(PORT, () => {
+//     console.log(`正在监听端口${PORT}`);
+// })
 
 // 初始化 openai 客户端
 // async function main() {

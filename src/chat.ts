@@ -29,7 +29,7 @@ router.post('/stream/', (req, res) => dealStreamReq(req, res));
 // 函数们，用来处理数据返回数据的
 // ==============================
 
-async function dealCommonReq(req, res) {
+async function dealCommonReq(req: any, res: any): Promise<any> {
     try {
         const userMessage = req?.body?.message;
         if (!userMessage || typeof userMessage !== 'string') {
