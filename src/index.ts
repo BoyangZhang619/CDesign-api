@@ -13,8 +13,9 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use('/chat',chatRouter)
-const PORT = process.env.PORT;
+app.use('/chat', chatRouter)
+const PORT = Number(process.env.PORT || 8080);
+console.log('PORT =', process.env.PORT);
 const CONSOLE_OPEN = process.env.CONSOLE_OPEN;
 const MYSQL_PORT = process.env.MYSQL_PORT || process.env.MYSQLPORT;
 const MYSQL_USER = process.env.MYSQL_USERNAME || process.env.MYSQLUSERNAME;
@@ -74,7 +75,7 @@ app.post('/sql', async (req: any, res: any) => {
     const params: string[] | number[] = body.params;
     try {
         const db = new DB(generateDBconfig());
-        console.log(generateDBconfig(),body);
+        console.log(generateDBconfig(), body);
         const jsonText = await db.query(sql, params);
         console.log(jsonText);
         sendResult(res, jsonText);
@@ -85,9 +86,9 @@ app.post('/sql', async (req: any, res: any) => {
 })
 
 
-// app.listen(PORT, () => {
-//     console.log(`正在监听端口${PORT}`);
-// })
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`正在监听端口${PORT}`);
+})
 
 // 初始化 openai 客户端
 // async function main() {
