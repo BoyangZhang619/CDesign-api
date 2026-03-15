@@ -74,6 +74,7 @@ app.post('/sql', async (req: any, res: any) => {
     const params: string[] | number[] = body.params;
     try {
         const db = new DB(generateDBconfig());
+        console.log(generateDBconfig(),body);
         const jsonText = await db.query(sql, params);
         console.log(jsonText);
         sendResult(res, jsonText);
