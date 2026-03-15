@@ -2,7 +2,6 @@ import type {Request, Response} from 'express';
 import express from 'express';
 import {openai} from "../services/openai.js";
 import type {ChatCompletionMessageParam} from "openai/resources/chat/completions";
-import process from 'process';
 import {sendError, sendResult} from '../util/response.js';
 
 const router = express.Router({mergeParams: true});
@@ -15,10 +14,12 @@ const router = express.Router({mergeParams: true});
 router.post('/ptio/common', (req: Request, res: Response): Promise<any> => dealCommonReq(req, res));
 //ptio -> pure-text-in-text-out | st -> stream
 router.post('/ptio/stream', (req: Request, res: Response) => dealStreamReq(req, res));
-//itito -> img-text-in-text-out | co -> common
-router.post('/itito/common', (req: Request, res: Response): void => {});
-//itito -> img-text-in-text-out | st -> stream
-router.post('/itito/stream', (req: Request, res: Response): void => {});
+// //itito -> img-text-in-text-out | co -> common
+// router.post('/itito/common', (req: Request, res: Response): void => {
+// });
+// //itito -> img-text-in-text-out | st -> stream
+// router.post('/itito/stream', (req: Request, res: Response): void => {
+// });
 
 // ==============================
 // 函数们，用来处理数据返回数据的
@@ -26,7 +27,7 @@ router.post('/itito/stream', (req: Request, res: Response): void => {});
 
 type typeModel = 'qwen3.5-flash' | 'qwen3.5-max';
 type typeLanguage = 'Chinese' | 'English' | 'Japanese' | 'French' | 'German';
-type typeResTextType = 'text' | 'json' | 'markdown' | 'html';
+type typeResTextType = 'text' | 'json_object';
 
 interface META {
     user_content: string;
@@ -68,14 +69,13 @@ async function dealCommonTextReq(meta: META) {
             extra_body: {
                 enable_thinking: meta?.enable_thinking || false,
             },
+            response_format: {"type": meta.response_type}
         });
-        const text: string = completion.choices?.[0]?.message?.content ?? '';
-        const result = {
+        return {
             ok: true,
             model: meta?.model || 'qwen3.5-flash',
-            content: text
+            content: JSON.stringify(completion || {}),
         };
-        return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         return {
@@ -89,7 +89,6 @@ async function dealCommonTextReq(meta: META) {
 async function dealCommonReq(req: any, res: any): Promise<any> {
     try {
         const {body} = req;
-        console.log(req);
         if (!body || !body?.message) throw new Error("格式错误，无数据，in dealCommonReq")
         const meta: META = {
             user_content: body?.message || '请返回对应输出类型的空值',
