@@ -16,7 +16,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -35,8 +35,6 @@
   "devDependencies": {
     "@types/express": "^5.0.1",
     "@types/node": "^22.13.10",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
-  },
-  "keywords": []
+    "tsx": "^4.19.3"
+  }
 }
