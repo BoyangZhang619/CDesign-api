@@ -13,8 +13,7 @@
   "license": "ISC",
   "author": "zyx,zby,zzl,wyh etc",
   "type": "module",
-  "main": "src/index.ts",
-  "allowImportingTsExtensions": true,
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -31,7 +30,7 @@
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.19.1",
     "openai": "^6.29.0",
-    "tsc": "^2.0.4"
+    "typescript": "^5.7.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
