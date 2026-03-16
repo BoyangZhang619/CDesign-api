@@ -30,7 +30,8 @@
     "gh": "^2.8.9",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.19.1",
-    "openai": "^6.29.0"
+    "openai": "^6.29.0",
+    "tsc": "^2.0.4"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",

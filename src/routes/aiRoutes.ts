@@ -1,9 +1,10 @@
 import express from 'express';
 import authMiddleware from '../middlewares/authMiddleware.js';
-import { chat } from '../controllers/aiController.js';
+import { commonChatHandler, streamChatHandler } from '../controllers/aiController.js';
 
 const router = express.Router();
 
-router.post('/chat', authMiddleware, chat);
+router.post('/ptio/common', commonChatHandler);
+router.post('/ptio/stream', streamChatHandler);
 
 export default router;
