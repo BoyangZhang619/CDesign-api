@@ -1,4 +1,5 @@
 import * as mysql from 'mysql2/promise'
+import env from '../config/env.js';
 
 interface DBconfig {
     host: string;
@@ -8,11 +9,11 @@ interface DBconfig {
     port: number;
 }
 
-const MYSQL_PORT = process.env.MYSQL_PORT || process.env.MYSQLPORT;
-const MYSQL_USER = process.env.MYSQL_USERNAME || process.env.MYSQLUSERNAME;
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD;
-const MYSQL_HOST = process.env.MYSQL_HOST || process.env.MYSQLHOST;
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE;
+const MYSQL_PORT = env.db.port;
+const MYSQL_USER = env.db.user;
+const MYSQL_PASSWORD = env.db.password;
+const MYSQL_HOST = env.db.host;
+const MYSQL_DATABASE = env.db.database;
 
 function generateDBconfig(host = MYSQL_HOST, user = MYSQL_USER, password = MYSQL_PASSWORD, database = MYSQL_DATABASE, port = Number(MYSQL_PORT)) {
     return {host, user, password, database, port}
