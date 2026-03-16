@@ -11,9 +11,6 @@ import { Request, Response } from 'express';
 import env from '../config/env.js';
 import path from 'path';
 
-interface authRequest extends Request {
-    user?: any;
-}
 function getRefreshCookieOptions() {
     // TODO: path在设定好路由后需要确定
     return {
@@ -25,7 +22,7 @@ function getRefreshCookieOptions() {
     };
 }
 
-async function register(req: authRequest, res: Response) {
+async function register(req: Request, res: Response) {
     try {
         const { username, password } = req.body;
         if (!username || !password) {
@@ -52,7 +49,7 @@ async function userExists(username: string) {
     }
 }
 
-async function login(req: authRequest, res: Response) {
+async function login(req: Request, res: Response) {
     try {
         const { username, password } = req.body;
         if (!username || !password) {
@@ -93,7 +90,7 @@ async function login(req: authRequest, res: Response) {
     }
 }
 
-async function refresh(req: authRequest, res: Response) {
+async function refresh(req: Request, res: Response) {
     try {
         const refreshToken = req.cookies.refreshToken;
 
@@ -184,7 +181,7 @@ async function refresh(req: authRequest, res: Response) {
     }
 }
 
-async function me(req: authRequest, res: Response) {
+async function me(req: Request, res: Response) {
     try {
         const [rows] = await pool.execute(
             'SELECT id, email, credits, created_at FROM users WHERE id = ? LIMIT 1',
@@ -208,7 +205,7 @@ async function me(req: authRequest, res: Response) {
  * 单设备退出登录
  * 删除当前 refresh token 记录并清除 cookie
  */
-async function logout(req: authRequest, res: Response) {
+async function logout(req: Request, res: Response) {
     try {
         const refreshToken = req.cookies.refreshToken;
 

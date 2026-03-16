@@ -8,9 +8,6 @@ interface AuthUser {
     id: number;
 }
 
-interface AuthRequest extends Request {
-    user?: AuthUser;
-}
 
 type ModelType = 'qwen3.5-flash' | 'qwen3.5-max';
 type LanguageType = 'Chinese' | 'English' | 'Japanese' | 'French' | 'German';
@@ -66,7 +63,7 @@ function buildMessages(meta: META): ChatCompletionMessageParam[] {
     ];
 }
 
-function buildMetaFromReq(req: AuthRequest): META {
+function buildMetaFromReq(req: Request): META {
     const { body } = req;
 
     if (!body || !body.message) {
@@ -84,7 +81,7 @@ function buildMetaFromReq(req: AuthRequest): META {
     };
 }
 
-function getUserIdFromReq(req: AuthRequest): number {
+function getUserIdFromReq(req: Request): number {
     if (!req.user || typeof req.user.id !== 'number' || !Number.isInteger(req.user.id) || req.user.id <= 0) {
         throw new Error('未授权或用户信息无效');
     }
@@ -257,7 +254,7 @@ async function streamChat(meta: META, res: Response): Promise<ChatResult> {
     }
 }
 
-async function commonChatHandler(req: AuthRequest, res: Response): Promise<any> {
+async function commonChatHandler(req: Request, res: Response): Promise<any> {
     try {
         const userId = getUserIdFromReq(req);
         const user = await getUserById(userId);
@@ -297,7 +294,7 @@ async function commonChatHandler(req: AuthRequest, res: Response): Promise<any> 
     }
 }
 
-async function streamChatHandler(req: AuthRequest, res: Response): Promise<any> {
+async function streamChatHandler(req: Request, res: Response): Promise<any> {
     try {
         const userId = getUserIdFromReq(req);
         const user = await getUserById(userId);
