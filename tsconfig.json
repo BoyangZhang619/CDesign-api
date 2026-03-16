@@ -6,8 +6,6 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
     "outDir": "dist"
   },
   "include": [
