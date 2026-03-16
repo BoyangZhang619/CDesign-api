@@ -7,11 +7,16 @@ import env from './config/env.js';
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 
+const allowOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://cdw.zbyblq.xin'
+];
 dotenv.config();
 const app = express();
 const PORT = Number(env.port || 8080);
 app.use(cors({
-    origin: env.clientOrigin,
+    origin: allowOrigins,
     credentials: true
 }));
 app.use(express.json());
