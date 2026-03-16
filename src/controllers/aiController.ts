@@ -82,10 +82,10 @@ function buildMetaFromReq(req: Request): META {
 }
 
 function getUserIdFromReq(req: Request): number {
-    if (!req.user || typeof req.user.id !== 'number' || !Number.isInteger(req.user.id) || req.user.id <= 0) {
+    if (!req.user || typeof req.user.userId !== 'number' || !Number.isInteger(req.user.userId) || req.user.userId <= 0) {
         throw new Error('未授权或用户信息无效');
     }
-    return req.user.id;
+    return req.user.userId;
 }
 
 async function getUserById(userId: number): Promise<UserRow | null> {

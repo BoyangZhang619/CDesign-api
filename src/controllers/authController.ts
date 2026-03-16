@@ -9,7 +9,6 @@ import {
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import env from '../config/env.js';
-import path from 'path';
 
 function getRefreshCookieOptions() {
     // TODO: path在设定好路由后需要确定
@@ -122,9 +121,7 @@ async function refresh(req: Request, res: Response) {
         const tokenRecord = rows[0];
 
         if (tokenRecord.revoked_at) {
-            return res.status(401).json({
-                message: 'refresh token 已失效'
-            });
+            return sendError(res, 'refresh token 已失效', 401);
         }
 
         const [userRows] = await pool.execute(
@@ -235,9 +232,9 @@ async function logout(req: Request, res: Response) {
 
 /**
  * 全设备退出登录
- * 可用于“修改密码后全部设备失效”
+ * 可用于"修改密码后全部设备失效"
  */
-async function logoutAll(req, res) {
+async function logoutAll(req: Request, res: Response) {
     try {
         await pool.execute(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',

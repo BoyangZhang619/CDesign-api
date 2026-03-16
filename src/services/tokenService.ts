@@ -6,8 +6,8 @@ const jwtConfig = env.jwt;
 function signAccessToken(user) {
     return jwt.sign(
         {
-            id: user.id,
-            email: user.id
+            userId: user.id,
+            email: user.email
         },
         jwtConfig.accessSecret,
         {
@@ -19,7 +19,7 @@ function signAccessToken(user) {
 function signRefreshToken(user) {
     return jwt.sign(
         {
-            id: user.id,
+            userId: user.id,
         },
         jwtConfig.refreshSecret,
         {
