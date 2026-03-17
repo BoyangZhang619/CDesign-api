@@ -27,13 +27,13 @@ echo -e "${COLORS_BLUE}========================================${NC}\n"
 # ==========================================
 echo -e "${COLORS_YELLOW}[1] 注册新用户${NC}"
 TIMESTAMP=$(date +%s)
-TEST_USERNAME="testuser_$TIMESTAMP"
+TEST_EMAIL="testuser_$TIMESTAMP@example.com"
 TEST_PASSWORD="password123"
 
 REGISTER_RESPONSE=$(curl -s -X POST $API_BASE/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "'$TEST_USERNAME'",
+    "email": "'$TEST_EMAIL'",
     "password": "'$TEST_PASSWORD'"
   }')
 
@@ -53,7 +53,7 @@ LOGIN_RESPONSE=$(curl -s -X POST $API_BASE/api/auth/login \
   -H "Content-Type: application/json" \
   -c $COOKIES_FILE \
   -d '{
-    "username": "'$TEST_USERNAME'",
+    "email": "'$TEST_EMAIL'",
     "password": "'$TEST_PASSWORD'"
   }')
 

@@ -12,7 +12,7 @@ https://cda.api.zbyblq.xin
 curl -X POST https://cda.api.zbyblq.xin/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser",
+    "email": "user@example.com",
     "password": "password123"
   }'
 ```
@@ -23,7 +23,7 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
   -c cookies.txt \
   -d '{
-    "username": "testuser",
+    "email": "user@example.com",
     "password": "password123"
   }'
 ```
@@ -32,7 +32,7 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/login \
 ```bash
 curl -s -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"password123"}' | \
+  -d '{"email":"user@example.com","password":"password123"}' | \
   jq -r '.data.accessToken'
 ```
 
@@ -216,7 +216,7 @@ curl -X POST ... -H "Content-Type: application/json" -d @body.json  # 从文件�
 ```bash
 export API="https://cda.api.zbyblq.xin"
 export TOKEN="your_access_token"
-export USERNAME="testuser"
+export EMAIL="user@example.com"
 export PASSWORD="password123"
 ```
 
@@ -234,27 +234,27 @@ curl -X GET $API/api/auth/me \
 ```bash
 curl -s -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"test","password":"test"}' | jq -r '.data.accessToken'
+  -d '{"email":"user@example.com","password":"password123"}' | jq -r '.data.accessToken'
 ```
 
 ### 直接使用 token 调用 API
 ```bash
 TOKEN=$(curl -s -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"test","password":"test"}' | jq -r '.data.accessToken') && \
+  -d '{"email":"user@example.com","password":"password123"}' | jq -r '.data.accessToken') && \
 curl -X GET https://cda.api.zbyblq.xin/api/auth/me \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ### 快速注册并登录
 ```bash
-USER="user_$(date +%s)" && \
+EMAIL="user_$(date +%s)@example.com" && \
 curl -s -X POST https://cda.api.zbyblq.xin/api/auth/register \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$USER\",\"password\":\"test123\"}" && \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"test123\"}" && \
 curl -s -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$USER\",\"password\":\"test123\"}" | jq .
+  -d "{\"email\":\"$EMAIL\",\"password\":\"test123\"}" | jq .
 ```
 
 ---
@@ -312,7 +312,7 @@ curl -s -X POST https://cda.api.zbyblq.xin/api/auth/login \
 POST {{base_url}}/api/auth/register
 Body (raw JSON):
 {
-  "username": "{{$timestamp}}",
+  "email": "user_{{$timestamp}}@example.com",
   "password": "password123"
 }
 ```
@@ -322,7 +322,7 @@ Body (raw JSON):
 POST {{base_url}}/api/auth/login
 Body (raw JSON):
 {
-  "username": "testuser",
+  "email": "user@example.com",
   "password": "password123"
 }
 

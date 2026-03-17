@@ -112,7 +112,7 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 
 | 参数 | 类型 | 必需 | 说明 |
 |------|------|------|------|
-| `username` | `string` | ✅ | 用户名（唯一） |
+| `email` | `string` | ✅ | 邮箱地址（唯一） |
 | `password` | `string` | ✅ | 密码（至少 6 位） |
 
 **请求示例**
@@ -121,7 +121,7 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 curl -X POST https://cda.api.zbyblq.xin/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser",
+    "email": "user@example.com",
     "password": "password123"
   }'
 ```
@@ -142,15 +142,15 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/register \
 
 | 状态码 | 错误信息 | 说明 |
 |--------|---------|------|
-| `400` | 用户名和密码不能为空 | 缺少必要参数 |
-| `400` | 用户已存在 | 用户名已被注册 |
+| `400` | 邮箱和密码不能为空 | 缺少必要参数 |
+| `400` | 用户已存在 | 邮箱已被注册 |
 | `500` | 注册失败 | 服务器错误 |
 
 ---
 
 ### 2. 用户登录
 
-使用用户名和密码登录，获取 Access Token。
+使用邮箱和密码登录，获取 Access Token。
 
 **请求信息**
 
@@ -165,7 +165,7 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/register \
 
 | 参数 | 类型 | 必需 | 说明 |
 |------|------|------|------|
-| `username` | `string` | ✅ | 用户名 |
+| `email` | `string` | ✅ | 邮箱地址 |
 | `password` | `string` | ✅ | 密码 |
 
 **请求示例**
@@ -175,7 +175,7 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/login \
   -H "Content-Type: application/json" \
   -c cookies.txt \
   -d '{
-    "username": "testuser",
+    "email": "user@example.com",
     "password": "password123"
   }'
 ```
@@ -191,7 +191,7 @@ curl -X POST https://cda.api.zbyblq.xin/api/auth/login \
     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": 123,
-      "username": "testuser"
+      "email": "user@example.com"
     }
   }
 }
@@ -207,8 +207,8 @@ Set-Cookie: refreshToken=xxx; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Ma
 
 | 状态码 | 错误信息 | 说明 |
 |--------|---------|------|
-| `400` | 用户名和密码不能为空 | 缺少必要参数 |
-| `400` | 用户不存在 | 用户名不存在 |
+| `400` | 邮箱和密码不能为空 | 缺少必要参数 |
+| `400` | 用户不存在 | 邮箱不存在 |
 | `400` | 密码错误 | 密码不匹配 |
 | `500` | 登录失败 | 服务器错误 |
 

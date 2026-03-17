@@ -23,24 +23,33 @@ function getRefreshCookieOptions() {
 
 async function register(req: Request, res: Response) {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return sendError(res, '用户名和密码不能为空', 400);
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return sendError(res, '邮箱和密码不能为空', 400);
         }
-        if (await userExists(username)) {
-            return sendError(res, '用户已存在', 400);
+        // 验证邮箱格式
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return sendError(res, '邮箱格式不正确', 400);
+        }
+        // 验证密码长度
+        if (password.length < 6) {
+            return sendError(res, '密码长度至少为 6 位', 400);
+        }
+        if (await userExists(email)) {
+            return sendError(res, '该邮箱已被注册', 400);
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        await pool.execute('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword]);
+        await pool.execute('INSERT INTO users (email, password_hash, credits) VALUES (?, ?, ?)', [email, hashedPassword, 0]);
         return sendResult(res, '注册成功');
     } catch (error) {
         return sendError(res, error.message + " 注册失败", 500);
     }
 }
 
-async function userExists(username: string) {
+async function userExists(email: string) {
     try {
-        const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
+        const [rows] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
         return (rows as any[]).length > 0;
     } catch (error) {
         console.error('检测用户是否存在时出错:', error);
@@ -50,16 +59,16 @@ async function userExists(username: string) {
 
 async function login(req: Request, res: Response) {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return sendError(res, '用户名和密码不能为空', 400);
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return sendError(res, '邮箱和密码不能为空', 400);
         }
-        const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
+        const [rows] = await pool.execute('SELECT id, email, password_hash, credits FROM users WHERE email = ?', [email]);
         if ((rows as any[]).length === 0) {
-            return sendError(res, '用户不存在', 400);
+            return sendError(res, '邮箱未注册', 400);
         }
         const user = (rows as any[])[0];
-        const passwordMatch = await bcrypt.compare(password, user.password);
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             return sendError(res, '密码错误', 400);
         }
@@ -81,7 +90,7 @@ async function login(req: Request, res: Response) {
             accessToken,
             user: {
                 id: user.id,
-                username: user.username
+                email: user.email
             }
         });
     } catch (error) {
