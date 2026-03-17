@@ -256,7 +256,7 @@ async function streamChat(meta: META, res: Response): Promise<ChatResult> {
 
 async function commonChatHandler(req: Request, res: Response): Promise<any> {
     try {
-        console.log('Received common chat request with body:', req.body);
+        console.log('Received common chat request with body:', req);
         const userId = getUserIdFromReq(req);
         const user = await getUserById(userId);
 
