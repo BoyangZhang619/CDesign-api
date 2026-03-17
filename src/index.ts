@@ -22,7 +22,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use((req, res, next) => {
-    console.log('====== NEW REQUEST ======');
+    console.log('=============================== NEW REQUEST ===============================');
     console.log('TIME:', new Date().toISOString());
     console.log('METHOD:', req.method);
     console.log('URL:', req.originalUrl);
@@ -34,7 +34,7 @@ app.use((req, res, next) => {
     console.log('QUERY:', req.query);
     console.log('BODY:', req.body);
     console.log('COOKIES:', req.cookies);
-    console.log('=========================');
+    console.log('===========================================================================');
     next();
 });
 app.use('/', (req, res) => { res.send('why are you here?'); });
