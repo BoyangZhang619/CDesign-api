@@ -82,7 +82,7 @@ function buildMetaFromReq(req: Request): META {
 }
 
 function getUserIdFromReq(req: Request): number {
-    if (!req.user || typeof req.user.userId !== 'number' || !Number.isInteger(req.user.userId) || req.user.userId <= 0) {
+    if (!req.user || !req.user.userId) {
         throw new Error('未授权或用户信息无效');
     }
     return req.user.userId;
@@ -256,6 +256,7 @@ async function streamChat(meta: META, res: Response): Promise<ChatResult> {
 
 async function commonChatHandler(req: Request, res: Response): Promise<any> {
     try {
+        console.log('Received common chat request with body:', req.body);
         const userId = getUserIdFromReq(req);
         const user = await getUserById(userId);
 
