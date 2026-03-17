@@ -4,7 +4,7 @@ import { commonChatHandler, streamChatHandler } from '../controllers/aiControlle
 
 const router = express.Router();
 
-router.post('/ptio/common', commonChatHandler);
-router.post('/ptio/stream', streamChatHandler);
+router.post('/ptio/common', authMiddleware, commonChatHandler);
+router.post('/ptio/stream', authMiddleware, streamChatHandler);
 
 export default router;

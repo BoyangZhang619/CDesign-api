@@ -8,7 +8,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/refresh', refresh);
 router.get('/me', authMiddleware, me);
-router.post('/logout', logout);
+router.post('/logout', authMiddleware, logout);
 router.post('/logout-all', authMiddleware, logoutAll);
 
 export default router;
