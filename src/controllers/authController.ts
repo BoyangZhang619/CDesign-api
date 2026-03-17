@@ -24,46 +24,33 @@ function getRefreshCookieOptions() {
 async function register(req: Request, res: Response) {
     try {
         const { email, password } = req.body;
-        console.log('[Register] 开始注册，邮箱:', email);
+        const name = req.body.name || 'A guy/girl';
         
         if (!email || !password) {
-            console.log('[Register] 邮箱或密码为空');
             return sendError(res, '邮箱和密码不能为空', 400);
         }
         
         // 验证邮箱格式
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            console.log('[Register] 邮箱格式不正确:', email);
             return sendError(res, '邮箱格式不正确', 400);
         }
         
         // 验证密码长度
         if (password.length < 6) {
-            console.log('[Register] 密码长度不足');
             return sendError(res, '密码长度至少为 6 位', 400);
         }
         
-        console.log('[Register] 检查邮箱是否已存在');
         const exists = await userExists(email);
         if (exists) {
-            console.log('[Register] 邮箱已被注册:', email);
             return sendError(res, '该邮箱已被注册', 400);
         }
         
-        console.log('[Register] 开始加密密码');
         const hashedPassword = await bcrypt.hash(password, 10);
-        console.log('[Register] 密码加密完成');
-        
-        console.log('[Register] 插入数据库');
-        const result = await pool.execute('INSERT INTO users (email, password_hash, credits) VALUES (?, ?, ?)', [email, hashedPassword, 0]);
-        console.log('[Register] 插入成功:', result);
-        
+        // TODO: 可以考虑在 users 表中添加一个 name 字段，并在注册时保存用户的名字
+        await pool.execute('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
         return sendResult(res, '注册成功');
     } catch (error) {
-        console.error('[Register] 错误详情:', error);
-        console.error('[Register] 错误消息:', error.message);
-        console.error('[Register] 错误堆栈:', error.stack);
         return sendError(res, error.message + " 注册失败", 500);
     }
 }
