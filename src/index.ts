@@ -37,10 +37,10 @@ app.use((req, res, next) => {
     console.log('===========================================================================');
     next();
 });
-app.use('/', (req, res) => { res.send('why are you here?'); });
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/sql', sqlRouter);
+app.get('/', (req, res) => { res.send('why are you here?'); });
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`正在监听端口${PORT}`);
