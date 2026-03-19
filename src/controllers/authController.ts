@@ -10,8 +10,8 @@ import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import env from '../config/env.js';
 
-function getRefreshCookieOptions() {
-    // TODO: path在设定好路由后需要确定
+// 返回 refresh token 的 cookie 选项
+function getRefreshCookieOptions(): Object {
     return {
         httpOnly: true,
         secure: env.nodeEnv === 'production',
@@ -21,43 +21,10 @@ function getRefreshCookieOptions() {
     };
 }
 
-async function register(req: Request, res: Response) {
+// 检测用户是否存在在user_account表中
+async function userExists(email: string): Promise<boolean> {
     try {
-        const { email, password } = req.body;
-        const name = req.body.name || 'A guy/girl';
-        
-        if (!email || !password) {
-            return sendError(res, '邮箱和密码不能为空', 400);
-        }
-        
-        // 验证邮箱格式
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return sendError(res, '邮箱格式不正确', 400);
-        }
-        
-        // 验证密码长度
-        if (password.length < 6) {
-            return sendError(res, '密码长度至少为 6 位', 400);
-        }
-        
-        const exists = await userExists(email);
-        if (exists) {
-            return sendError(res, '该邮箱已被注册', 400);
-        }
-        
-        const hashedPassword = await bcrypt.hash(password, 10);
-        // TODO: 可以考虑在 users 表中添加一个 name 字段，并在注册时保存用户的名字
-        await pool.execute('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        return sendResult(res, '注册成功');
-    } catch (error) {
-        return sendError(res, error.message + " 注册失败", 500);
-    }
-}
-
-async function userExists(email: string) {
-    try {
-        const [rows] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+        const [rows] = await pool.execute('SELECT id FROM user_account WHERE email = ?', [email]);
         return (rows as any[]).length > 0;
     } catch (error) {
         console.error('检测用户是否存在时出错:', error);
@@ -65,17 +32,71 @@ async function userExists(email: string) {
     }
 }
 
-async function login(req: Request, res: Response) {
+// 检测用户是否正常（存在且status=1）
+async function userAccountNormal(email: string): Promise<boolean> {
+    try {
+        const [rows] = await pool.execute('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
+        return (rows as any[]).length > 0;
+    } catch (error) {
+        console.error('检测用户是否正常时出错:', error);
+        return false;
+    }
+}
+
+// 注册新用户
+async function register(req: Request, res: Response): Promise<Response> {
+    try {
+        const { email, password } = req.body;
+        const name = req.body.name || 'A guy/girl';
+        const avatar_url = req.body.avatar_url || 'https://homepage-2em.pages.dev/iconWhite.png';
+        const phone = req.body.phone || '';
+        const role = req.body.role || 'student';
+
+        if (!email || !password) {
+            return sendError(res, '邮箱和密码不能为空', 400);
+        }
+
+        // 验证邮箱格式
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return sendError(res, '邮箱格式不正确', 400);
+        }
+
+        // 验证密码长度
+        if (password.length < 6) {
+            return sendError(res, '密码长度至少为 6 位', 400);
+        }
+
+        const exists = await userExists(email);
+        if (exists) {
+            return sendError(res, '该邮箱已被注册', 400);
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        // await pool.execute('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
+        await pool.execute('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [9876, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
+        return sendResult(res, '注册成功');
+    } catch (error) {
+        return sendError(res, error.message + " 注册失败", 500);
+    }
+}
+
+// 用户登录
+async function login(req: Request, res: Response): Promise<Response> {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
             return sendError(res, '邮箱和密码不能为空', 400);
         }
-        const [rows] = await pool.execute('SELECT id, email, password_hash, credits FROM users WHERE email = ?', [email]);
+        const [rows] = await pool.execute('SELECT id, email, password_hash FROM user_account WHERE email = ?', [email]);
         if ((rows as any[]).length === 0) {
-            return sendError(res, '邮箱未注册', 400);
+            return sendError(res, '账号未注册', 400);
         }
         const user = (rows as any[])[0];
+        const isUserNormal = await userAccountNormal(email);
+        if (isUserNormal === false) {
+            return sendError(res, '账号异常，请联系管理员', 403);
+        }
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             return sendError(res, '密码错误', 400);
@@ -94,6 +115,7 @@ async function login(req: Request, res: Response) {
         res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
         return sendResult(res, {
+            ip: req.ip,
             message: '登录成功',
             accessToken,
             user: {
@@ -106,7 +128,8 @@ async function login(req: Request, res: Response) {
     }
 }
 
-async function refresh(req: Request, res: Response) {
+// 刷新 access token,并实现 refresh token 轮换
+async function refresh(req: Request, res: Response): Promise<Response> {
     try {
         const refreshToken = req.cookies.refreshToken;
 
@@ -124,10 +147,7 @@ async function refresh(req: Request, res: Response) {
         const refreshTokenHash = sha256(refreshToken);
 
         const [rows] = await pool.execute(
-            `SELECT id, user_id, revoked_at, expires_at
-       FROM refresh_tokens
-       WHERE token_hash = ?
-       LIMIT 1`,
+            `SELECT id, user_id, revoked_at, expires_at FROM refresh_tokens WHERE token_hash = ? LIMIT 1`,
             [refreshTokenHash]
         );
 
@@ -195,10 +215,11 @@ async function refresh(req: Request, res: Response) {
     }
 }
 
-async function me(req: Request, res: Response) {
+// 获取当前登录用户信息
+async function me(req: Request, res: Response): Promise<Response> {
     try {
         const [rows] = await pool.execute(
-            'SELECT id, email, credits, created_at FROM users WHERE id = ? LIMIT 1',
+            'SELECT * FROM user_account WHERE id = ? LIMIT 1',
             [req.user.userId]
         );
 
@@ -215,11 +236,8 @@ async function me(req: Request, res: Response) {
     }
 }
 
-/**
- * 单设备退出登录
- * 删除当前 refresh token 记录并清除 cookie
- */
-async function logout(req: Request, res: Response) {
+// 退出登录（作废当前 refresh token）
+async function logout(req: Request, res: Response): Promise<Response> {
     try {
         const refreshToken = req.cookies.refreshToken;
 
@@ -247,11 +265,8 @@ async function logout(req: Request, res: Response) {
     }
 }
 
-/**
- * 全设备退出登录
- * 可用于"修改密码后全部设备失效"
- */
-async function logoutAll(req: Request, res: Response) {
+// 退出所有设备（作废当前用户的所有 refresh token）
+async function logoutAll(req: Request, res: Response): Promise<Response> {
     try {
         await pool.execute(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',
@@ -274,11 +289,119 @@ async function logoutAll(req: Request, res: Response) {
     }
 }
 
+// 切换用户信息 [nickname, avatar_url, role]
+async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {
+    const { email, password, switch_type, switch_value } = req.body;
+    const userId = req.user.userId;
+    const [userRows] = await pool.execute(
+        'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+        [email, userId]
+    );
+
+    if ((userRows as any[]).length === 0) {
+        return sendError(res, '用户不存在', 404);
+    }
+
+    const [rows] = await pool.execute('SELECT count(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = "user_account" AND column_name = ?', [switch_type]);
+
+    if ((rows as any[])[0].count === 0) {
+        return sendError(res, '无效的切换类型', 400);
+    }
+
+    await pool.execute(`UPDATE user_account SET ${switch_type} = ? WHERE id = ?`, [switch_value, userId]);
+
+    return sendResult(res, {
+        message: '用户信息切换成功',
+        userInfo: {
+            email,
+            userId
+        }
+    });
+}
+
+// 切换admin权限（仅测试用 骗你的，真正有admin的是直接改数据库的，嘻嘻）
+async function SwitchAdmin(req: Request, res: Response): Promise<Response> {
+    return sendError(res, '就你也想获得admin权限？', 404);
+}
+
+// 切换密码
+async function SwitchPassword(req: Request, res: Response): Promise<Response> {
+    const { email, old_password, new_password } = req.body;
+    const userId = req.user.userId;
+
+    // 检查用户是否存在
+    const [userRows] = await pool.execute(
+        'SELECT id, password FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+        [email, userId]
+    );
+
+    if ((userRows as any[]).length === 0) {
+        return sendError(res, '用户不存在', 404);
+    }
+
+    const user = userRows[0];
+
+    // 验证旧密码
+    const isOldPasswordValid = await bcrypt.compare(old_password, user.password);
+    if (!isOldPasswordValid) {
+        return sendError(res, '旧密码不正确', 400);
+    }
+
+    // 更新密码
+    const hashedNewPassword = await bcrypt.hash(new_password, 10);
+    await pool.execute(
+        'UPDATE user_account SET password = ? WHERE id = ?',
+        [hashedNewPassword, userId]
+    );
+
+    return sendResult(res, {
+        message: '密码切换成功',
+        userInfo: {
+            email,
+            userId
+        }
+    });
+}
+
+// 切换邮箱
+async function SwitchEmail(req: Request, res: Response): Promise<Response> {
+    const { email, new_email } = req.body;
+    const userId = req.user.userId;
+
+    // 检查用户是否存在
+    const [userRows] = await pool.execute(
+        'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+        [email, userId]
+    );
+
+    if ((userRows as any[]).length === 0) {
+        return sendError(res, '用户不存在', 404);
+    }
+
+    // 更新邮箱
+    await pool.execute(
+        'UPDATE user_account SET email = ? WHERE id = ?',
+        [new_email, userId]
+    );
+
+    return sendResult(res, {
+        message: '邮箱切换成功',
+        userInfo: {
+            email: new_email,
+            userId
+        }
+    });
+}
+
 export {
     register,
     login,
     refresh,
     me,
     logout,
-    logoutAll
+    logoutAll,
+    SwitchCommonUserInfo,
+    SwitchAdmin,
+    SwitchPassword,
+    SwitchEmail
 };

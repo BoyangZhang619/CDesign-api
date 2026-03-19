@@ -2,9 +2,9 @@ export const securityConfig = {
     apiKey: process.env.API_KEY || 'replace-this-in-production',
 
     allowedOrigins: [
-        'https://your-frontend.com',
-        'https://admin.your-frontend.com',
+        'https://cdw.zbyblq.xin',
         'http://localhost:5173',
+        'http://localhost:5174',
     ],
 
     rateLimit: {

@@ -9,7 +9,7 @@ interface AuthUser {
 }
 
 
-type ModelType = 'qwen3.5-flash' | 'qwen3.5-max';
+type ModelType = 'qwen3.5-flash' | 'qwen3.5-plus';
 type LanguageType = 'Chinese' | 'English' | 'Japanese' | 'French' | 'German';
 type ResponseTextType = 'text' | 'json_object';
 
@@ -90,7 +90,7 @@ function getUserIdFromReq(req: Request): number {
 
 async function getUserById(userId: number): Promise<UserRow | null> {
     const [rows] = await pool.execute(
-        'SELECT id, credits FROM users WHERE id = ? LIMIT 1',
+        'SELECT id, credits FROM user_account WHERE id = ? LIMIT 1',
         [userId]
     );
 
@@ -284,7 +284,7 @@ async function commonChatHandler(req: Request, res: Response): Promise<any> {
         }
 
         await pool.execute(
-            'UPDATE users SET credits = credits - ? WHERE id = ?',
+            'UPDATE user_account SET credits = credits - ? WHERE id = ?',
             [totalUsage, userId]
         );
 
@@ -319,7 +319,7 @@ async function streamChatHandler(req: Request, res: Response): Promise<any> {
 
         if (result.usage.total_tokens > 0) {
             await pool.execute(
-                'UPDATE users SET credits = credits - ? WHERE id = ?',
+                'UPDATE user_account SET credits = credits - ? WHERE id = ?',
                 [result.usage.total_tokens, userId]
             );
         }

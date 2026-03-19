@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import sqlRouter from './routes/sql.js';
 import cookieParser from 'cookie-parser';
 import env from './config/env.js';
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import rateLimit from 'express-rate-limit';
 
 const allowOrigins = [
     'http://localhost:5173',
@@ -15,13 +15,25 @@ const allowOrigins = [
 dotenv.config();
 const app = express();
 const PORT = Number(env.port || 8080);
+app.set('trust proxy', 1);
 app.use(cors({
     origin: allowOrigins,
     credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use((req, res, next) => {
+// app.use((req, res, next) => { consoleLog(req); next(); });
+app.use('/', rateLimit({ windowMs: 60000, max: 60 })); // 全局速率限制，每分钟每个IP最多60次请求
+app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速率限制，每分钟每个IP最多20次请求
+app.use('/api/auth', authRoutes);
+app.use('/api/ai', aiRoutes);
+app.get('/', (req, res) => { res.send('why are you here?'); });
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`========================================================正在监听端口${PORT}========================================================`);
+})
+
+function consoleLog(req: express.Request) {
     console.log('=============================== NEW REQUEST ===============================');
     console.log('TIME:', new Date().toISOString());
     console.log('METHOD:', req.method);
@@ -35,13 +47,4 @@ app.use((req, res, next) => {
     console.log('BODY:', req.body);
     console.log('COOKIES:', req.cookies);
     console.log('===========================================================================');
-    next();
-});
-app.use('/api/auth', authRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/sql', sqlRouter);
-app.get('/', (req, res) => { res.send('why are you here?'); });
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`正在监听端口${PORT}`);
-})
+}
