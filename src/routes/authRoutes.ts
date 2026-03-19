@@ -1,6 +1,16 @@
 import express from 'express';
 import authMiddleware from '../middlewares/authMiddleware.js';
-import { register, login, refresh, me, logout, logoutAll, SwitchAdmin, SwitchPassword, SwitchEmail } from '../controllers/authController.js';
+import {
+    register,
+    login,
+    refresh,
+    me,
+    logout,
+    logoutAll,
+    SwitchAdmin,
+    SwitchPassword,
+    SwitchEmail
+} from '../controllers/authController.js';
 
 const router = express.Router();
 

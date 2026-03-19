@@ -3,9 +3,11 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import env from './config/env.js';
+import rateLimit from 'express-rate-limit';
+
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
-import rateLimit from 'express-rate-limit';
+import healthInfoRouters from './routes/healthInfoRouters.js';
 
 const allowOrigins = [
     'http://localhost:5173',
@@ -27,6 +29,7 @@ app.use('/', rateLimit({ windowMs: 60000, max: 60 })); // 全局速率限制，�
 app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速率限制，每分钟每个IP最多20次请求
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/health-info', healthInfoRouters);
 app.get('/', (req, res) => { res.send('why are you here?'); });
 
 app.listen(PORT, '0.0.0.0', () => {
