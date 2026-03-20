@@ -50,11 +50,11 @@ async function deleteDailyCheckin(req: Request, res: Response): Promise<Response
     const [userId, today] = getBasicInfo(req).values();
     try {
         await pool.execute('DELETE FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        return sendResult(res, { success: true });
     } catch (error) {
         console.error('Error deleting daily check-in:', error);
         return sendError(res, 'Error deleting daily check-in');
     }
-    return sendResult(res, { success: true });
 }
 
 // 插入当前日期的打卡记录
@@ -100,11 +100,11 @@ async function insertDailyCheckin(req: Request, res: Response): Promise<Response
             mood ?? null,
             sleep_quality ?? null
         ]);
+        return sendResult(res, { success: true });
     } catch (error) {
         console.error('Error inserting daily check-in:', error);
         return sendError(res, 'Error inserting daily check-in');
     }
-    return sendResult(res, { success: true });
 }
 
 // 更新当前日期的打卡记录（如果已经存在则更新，否则插入）
@@ -151,13 +151,30 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
             ]);
         } else {
             // 如果记录不存在，则插入
-            await insertDailyCheckin(req, res);
+            await pool.execute('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+                userId ?? null,
+                today ?? null,
+                breakfast ?? null,
+                lunch ?? null,
+                dinner ?? null,
+                midnight_snack ?? null,
+                water_intake_ml ?? null,
+                exercise_duration_min ?? null,
+                sleep_start_time ?? null,
+                sleep_duration_hours ?? null,
+                body_weight_kg ?? null,
+                energy_level ?? null,
+                note ?? null,
+                completion_rate ?? null,
+                mood ?? null,
+                sleep_quality ?? null
+            ]);
         }
+        return sendResult(res, { success: true });
     } catch (error) {
         console.error('Error updating daily check-in:', error);
         return sendError(res, 'Error updating daily check-in');
     }
-    return sendResult(res, { success: true });
 }
 
 export {
