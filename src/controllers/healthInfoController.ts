@@ -38,7 +38,7 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
 
     try {
         await pool.execute(
-            `INSERT INTO user_health_info (user_id, gender, birthday, height, current_weight, target_weight, diet_preferences, diet_other, diet_other_text, health_goals, goal_other, goal_other_text, allergies, sleep_habit, activity_level)
+            `INSERT INTO user_profile (user_id, gender, birthday, height, current_weight, target_weight, diet_preferences, diet_other, diet_other_text, health_goals, goal_other, goal_other_text, allergies, sleep_habit, activity_level)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [userId, gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOther, dietOtherText, JSON.stringify(healthGoals), goalOther, goalOtherText, allergies, sleepHabit, activityLevel]
         );
@@ -62,7 +62,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
 
     try {
         await pool.execute(
-            `UPDATE user_health_info SET gender = ?, birthday = ?, height = ?, current_weight = ?, target_weight = ?, diet_preferences = ?, diet_other = ?, diet_other_text = ?, health_goals = ?, goal_other = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
+            `UPDATE user_profile SET gender = ?, birthday = ?, height = ?, current_weight = ?, target_weight = ?, diet_preferences = ?, diet_other = ?, diet_other_text = ?, health_goals = ?, goal_other = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
             [gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOther, dietOtherText, JSON.stringify(healthGoals), goalOther, goalOtherText, allergies, sleepHabit, activityLevel, userId]
         );
 
@@ -77,7 +77,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
 async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
     const [rows] = await pool.execute(
-        'SELECT * FROM user_health_info WHERE user_id = ? LIMIT 1',
+        'SELECT * FROM user_profile WHERE user_id = ? LIMIT 1',
         [userId]
     );
 

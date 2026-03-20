@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import healthInfoRouters from './routes/healthInfoRouters.js';
+import dailyCheckinRouters from './routes/dailyCheckinRouters.js';
 
 const allowOrigins = [
     'http://localhost:5173',
@@ -30,6 +31,7 @@ app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/health-info', healthInfoRouters);
+app.use('/api/daily-checkin', dailyCheckinRouters);
 app.get('/', (req, res) => { res.send('why are you here?'); });
 
 app.listen(PORT, '0.0.0.0', () => {
