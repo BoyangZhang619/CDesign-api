@@ -310,7 +310,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId ?? null;
     try {
         const [userRows] = await pool.execute(
-            'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+            'SELECT id FROM user_account WHERE id = ? LIMIT 1',
             [email, userId]
         );
 
