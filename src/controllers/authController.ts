@@ -305,8 +305,9 @@ async function updateLastLoginTime(userId: number): Promise<void> {
 
 // 更新用户信息
 async function updateUserInfo(req: Request, res: Response): Promise<Response> {
-    const { email, nickname, avatar_url, phone, role } = req.body;
-    const userId = req.user.userId;
+    const {
+        email = null, nickname = null, avatar_url = null, phone = null, role = null } = req.body;
+    const userId = req.user.userId ?? null;
     try {
         const [userRows] = await pool.execute(
             'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
@@ -321,10 +322,10 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         await pool.execute(
             'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ? WHERE id = ?',
             [
-                nickname ?? null,
-                avatar_url ?? null,
-                phone ?? null,
-                role ?? null,
+                nickname,
+                avatar_url,
+                phone,
+                role,
                 userId
             ]
         );
@@ -344,8 +345,8 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
 
 // 切换用户信息 [nickname, avatar_url, role]
 async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {
-    const { email, password, switch_type, switch_value } = req.body;
-    const userId = req.user.userId;
+    const { email = null, password = null, switch_type = null, switch_value = null } = req.body;
+    const userId = req.user.userId ?? null;
     const [userRows] = await pool.execute(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
@@ -380,8 +381,8 @@ async function SwitchAdmin(req: Request, res: Response): Promise<Response> {
 
 // 切换密码
 async function SwitchPassword(req: Request, res: Response): Promise<Response> {
-    const { email, old_password, new_password } = req.body;
-    const userId = req.user.userId;
+    const { email = null, old_password = null, new_password = null } = req.body;
+    const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
     const [userRows] = await pool.execute(
@@ -420,8 +421,8 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
 
 // 切换邮箱
 async function SwitchEmail(req: Request, res: Response): Promise<Response> {
-    const { email, new_email } = req.body;
-    const userId = req.user.userId;
+    const { email = null, new_email = null } = req.body;
+    const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
     const [userRows] = await pool.execute(
