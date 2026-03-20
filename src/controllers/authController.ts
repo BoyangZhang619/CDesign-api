@@ -320,7 +320,13 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         // 更新用户信息
         await pool.execute(
             'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ? WHERE id = ?',
-            [nickname, avatar_url, phone, role, userId]
+            [
+                nickname ?? null,
+                avatar_url ?? null,
+                phone ?? null,
+                role ?? null,
+                userId
+            ]
         );
 
         return sendResult(res, {
