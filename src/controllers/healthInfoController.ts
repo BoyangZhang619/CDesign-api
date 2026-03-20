@@ -26,9 +26,8 @@ async function CheckHealthInfo(req: Request, res: Response): Promise<Response> {
 // 插入健康信息
 
 async function InsertHealthInfo(req: Request, res: Response): Promise<Response> {
-    // interface HealthInfo {gender: string,birthday: string,height?: number,currentWeight?: number,targetWeight?: number,dietPreferences: string[],dietOther: boolean,dietOtherText: string,healthGoals: string[],goalOther: boolean,goalOtherText: string,allergies: string,sleepHabit: string,activityLevel: string }
     const userId = req.user.userId;
-    const { gender, birthday, height, currentWeight, targetWeight, dietPreferences, dietOtherText, healthGoals, goalOther, goalOtherText, allergies, sleepHabit, activityLevel } = req.body;
+    const { gender, birthday, height, currentWeight, targetWeight, dietPreferences, dietOtherText, healthGoals, goalOtherText, allergies, sleepHabit, activityLevel } = req.body;
 
     // 检查必填字段
     if (!gender || !birthday || !dietPreferences || !healthGoals || !allergies || !sleepHabit || !activityLevel) {
@@ -37,9 +36,9 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
 
     try {
         await pool.execute(
-            `INSERT INTO user_profile (user_id, gender, birthday, height_cm, current_weight_kg, target_weight_kg, dietary_preferences, diet_other_text, health_goals, goal_other, goal_other_text, allergies, sleep_habit, activity_level)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOther, goalOtherText, allergies, sleepHabit, activityLevel]
+            `INSERT INTO user_profile (user_id, gender, birthday, height_cm, current_weight_kg, target_weight_kg, dietary_preferences, diet_other_text, health_goals, goal_other_text, allergies, sleep_habit, activity_level)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [userId, gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOtherText, allergies, sleepHabit, activityLevel]
         );
 
         return sendResult(res, '健康信息插入成功');
@@ -52,7 +51,7 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
 // 更新健康信息
 async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    const { gender, birthday, height, currentWeight, targetWeight, dietPreferences, dietOtherText, healthGoals, goalOther, goalOtherText, allergies, sleepHabit, activityLevel } = req.body;
+    const { gender, birthday, height, currentWeight, targetWeight, dietPreferences, dietOtherText, healthGoals, goalOtherText, allergies, sleepHabit, activityLevel } = req.body;
 
     // 检查必填字段
     if (!gender || !birthday || !dietPreferences || !healthGoals || !allergies || !sleepHabit || !activityLevel) {
@@ -61,8 +60,8 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
 
     try {
         await pool.execute(
-            `UPDATE user_profile SET gender = ?, birthday = ?, height_cm = ?, current_weight_kg = ?, target_weight_kg = ?, diet_preferences = ?, diet_other_text = ?, health_goals = ?, goal_other = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
-            [gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOther, goalOtherText, allergies, sleepHabit, activityLevel, userId]
+            `UPDATE user_profile SET gender = ?, birthday = ?, height_cm = ?, current_weight_kg = ?, target_weight_kg = ?, diet_preferences = ?, diet_other_text = ?, health_goals = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
+            [gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOtherText, allergies, sleepHabit, activityLevel, userId]
         );
 
         return sendResult(res, '健康信息更新成功');
