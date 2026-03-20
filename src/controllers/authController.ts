@@ -114,6 +114,8 @@ async function login(req: Request, res: Response): Promise<Response> {
             ]);
         res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
+        await updateLastLoginTime(user.id);
+
         return sendResult(res, {
             ip: req.ip,
             message: '登录成功',
@@ -289,6 +291,51 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
     }
 }
 
+// 更新用户最后登录时间（每次登录成功后调用）
+async function updateLastLoginTime(userId: number): Promise<void> {
+    try {
+        await pool.execute(
+            'UPDATE user_account SET last_login_at = NOW() WHERE id = ?',
+            [userId]
+        );
+    } catch (error) {
+        console.error('updateLastLoginTime error:', error);
+    }
+}
+
+// 更新用户信息
+async function updateUserInfo(req: Request, res: Response): Promise<Response> {
+    const { email, nickname, avatar_url, phone, role } = req.body;
+    const userId = req.user.userId;
+    try {
+        const [userRows] = await pool.execute(
+            'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+            [email, userId]
+        );
+
+        if ((userRows as any[]).length === 0) {
+            return sendError(res, '用户不存在', 404);
+        }
+
+        // 更新用户信息
+        await pool.execute(
+            'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ? WHERE id = ?',
+            [nickname, avatar_url, phone, role, userId]
+        );
+
+        return sendResult(res, {
+            message: '用户信息更新成功',
+            userInfo: {
+                email,
+                userId
+            }
+        });
+    } catch (error) {
+        console.error('updateUserInfo error:', error);
+        return sendError(res, '用户信息更新失败', 500);
+    }
+}
+
 // 切换用户信息 [nickname, avatar_url, role]
 async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {
     const { email, password, switch_type, switch_value } = req.body;
@@ -309,6 +356,7 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
     }
 
     await pool.execute(`UPDATE user_account SET ${switch_type} = ? WHERE id = ?`, [switch_value, userId]);
+    await updateLastLoginTime(userId);
 
     return sendResult(res, {
         message: '用户信息切换成功',
@@ -353,6 +401,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
         'UPDATE user_account SET password = ? WHERE id = ?',
         [hashedNewPassword, userId]
     );
+    await updateLastLoginTime(userId);
 
     return sendResult(res, {
         message: '密码切换成功',
@@ -383,6 +432,7 @@ async function SwitchEmail(req: Request, res: Response): Promise<Response> {
         'UPDATE user_account SET email = ? WHERE id = ?',
         [new_email, userId]
     );
+    await updateLastLoginTime(userId);
 
     return sendResult(res, {
         message: '邮箱切换成功',
@@ -406,5 +456,6 @@ export {
     SwitchCommonUserInfo,
     SwitchAdmin,
     SwitchPassword,
-    SwitchEmail
+    SwitchEmail,
+    updateUserInfo
 };
