@@ -30,7 +30,7 @@ async function detectDailyCheckin(req: Request, res: Response, sendResponse: boo
 
 // 获取当前日期的打卡记录
 async function getDailyCheckin(req: Request, res: Response): Promise<Response> {
-    const [userId, today] = getBasicInfo(req).values();
+    const [userId, today] = getBasicInfo(req).map(info => info.value);
 
     try {
         const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
@@ -59,7 +59,7 @@ async function deleteDailyCheckin(req: Request, res: Response): Promise<Response
 
 // 插入当前日期的打卡记录
 async function insertDailyCheckin(req: Request, res: Response): Promise<Response> {
-    const [userId, today, body] = getBasicInfo(req).values();
+    const [userId, today, body] = getBasicInfo(req).map(info => info.value);
     // total_calories和total_steps由前端提取数据向ai api请求后返回，延迟处理
     const {
         breakfast,
@@ -109,7 +109,7 @@ async function insertDailyCheckin(req: Request, res: Response): Promise<Response
 
 // 更新当前日期的打卡记录（如果已经存在则更新，否则插入）
 async function updateDailyCheckin(req: Request, res: Response): Promise<Response> {
-    const [userId, today, body] = getBasicInfo(req).values();
+    const [userId, today, body] = getBasicInfo(req).map(info => info.value);
     const {
         breakfast,
         lunch,
