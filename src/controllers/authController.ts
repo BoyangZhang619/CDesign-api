@@ -311,7 +311,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     try {
         const [userRows] = await pool.execute(
             'SELECT id FROM user_account WHERE id = ? LIMIT 1',
-            [email, userId]
+            [userId]
         );
 
         if ((userRows as any[]).length === 0) {
