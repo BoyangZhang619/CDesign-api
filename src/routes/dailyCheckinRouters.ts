@@ -1,6 +1,7 @@
 import express from 'express';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import {
+    getDailyCheckin,
     detectDailyCheckin,
     deleteDailyCheckin,
     insertDailyCheckin,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+router.get('/get', getDailyCheckin);
 router.post('/detect',authMiddleware, (req, res, next) => {
     detectDailyCheckin(req, res, true).catch(next);
 });

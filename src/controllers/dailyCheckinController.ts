@@ -28,6 +28,23 @@ async function detectDailyCheckin(req: Request, res: Response, sendResponse: boo
     }
 }
 
+// 获取当前日期的打卡记录
+async function getDailyCheckin(req: Request, res: Response): Promise<Response> {
+    const [userId, today] = getBasicInfo(req).values();
+
+    try {
+        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        if ((rows as any[]).length > 0) {
+            return sendResult(res, { checkinData: rows[0] });
+        } else {
+            return sendResult(res, { checkinData: null });
+        }
+    } catch (error) {
+        console.error('Error getting daily check-in:', error);
+        return sendError(res, 'Error getting daily check-in');
+    }
+}
+
 // 删除当前日期的打卡记录
 async function deleteDailyCheckin(req: Request, res: Response): Promise<Response> {
     const [userId, today] = getBasicInfo(req).values();
@@ -65,7 +82,24 @@ async function insertDailyCheckin(req: Request, res: Response): Promise<Response
         return sendError(res, 'Already checked in today');
     }
     try {
-        await pool.execute('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [userId, today, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality]);
+        await pool.execute('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+            userId ?? null,
+            today ?? null,
+            breakfast ?? null,
+            lunch ?? null,
+            dinner ?? null,
+            midnight_snack ?? null,
+            water_intake_ml ?? null,
+            exercise_duration_min ?? null,
+            sleep_start_time ?? null,
+            sleep_duration_hours ?? null,
+            body_weight_kg ?? null,
+            energy_level ?? null,
+            note ?? null,
+            completion_rate ?? null,
+            mood ?? null,
+            sleep_quality ?? null
+        ]);
     } catch (error) {
         console.error('Error inserting daily check-in:', error);
         return sendError(res, 'Error inserting daily check-in');
@@ -97,7 +131,24 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
         const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         if ((rows as any[]).length > 0) {
             // 如果记录已存在，则更新
-            await pool.execute('UPDATE daily_checkin SET breakfast = ?, lunch = ?, dinner = ?, midnight_snack = ?, water_intake_ml = ?, exercise_duration_min = ?, sleep_start_time = ?, sleep_duration_hours = ?, body_weight_kg = ?, energy_level = ?, note = ?, completion_rate = ?, mood = ?, sleep_quality = ? WHERE user_id = ? AND checkin_date = ?', [breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality, userId, today]);
+            await pool.execute('UPDATE daily_checkin SET breakfast = ?, lunch = ?, dinner = ?, midnight_snack = ?, water_intake_ml = ?, exercise_duration_min = ?, sleep_start_time = ?, sleep_duration_hours = ?, body_weight_kg = ?, energy_level = ?, note = ?, completion_rate = ?, mood = ?, sleep_quality = ? WHERE user_id = ? AND checkin_date = ?', [
+                breakfast ?? null,
+                lunch ?? null,
+                dinner ?? null,
+                midnight_snack ?? null,
+                water_intake_ml ?? null,
+                exercise_duration_min ?? null,
+                sleep_start_time ?? null,
+                sleep_duration_hours ?? null,
+                body_weight_kg ?? null,
+                energy_level ?? null,
+                note ?? null,
+                completion_rate ?? null,
+                mood ?? null,
+                sleep_quality ?? null,
+                userId,
+                today
+            ]);
         } else {
             // 如果记录不存在，则插入
             await insertDailyCheckin(req, res);
@@ -110,6 +161,7 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
 }
 
 export {
+    getDailyCheckin,
     detectDailyCheckin,
     deleteDailyCheckin,
     insertDailyCheckin,
