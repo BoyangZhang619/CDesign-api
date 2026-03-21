@@ -1,0 +1,413 @@
+================================================================================
+                        运动打卡 API 文档
+================================================================================
+
+本文档定义了运动记录相关的所有接口，包括新增、查询、更新和删除运动打卡记录。
+
+所有接口均需要有效的身份验证（JWT token）。
+
+
+================================================================================
+1. 新增运动记录
+================================================================================
+
+请求方法: POST
+请求路径: /api/checkin/exercise
+身份验证: 需要
+
+请求体 JSON:
+{
+    "activity_type": "跑步",
+    "start_time": "2024-03-20 07:00:00",
+    "end_time": "2024-03-20 08:00:00",
+    "intensity": "medium",
+    "note": "早晨跑步锻炼"
+}
+
+参数说明:
+- activity_type (string, 必填): 运动类型
+  有效值: 跑步, 步行, 力量训练, 球类, 游泳, 骑车, 瑜伽, 其他
+  
+- start_time (string, 必填): 开始时间，格式 "YYYY-MM-DD HH:mm:ss"
+  
+- end_time (string, 必填): 结束时间，格式 "YYYY-MM-DD HH:mm:ss"
+  约束: end_time 必须晚于 start_time
+  
+- intensity (string, 必填): 运动强度
+  有效值: low (低), medium (中), high (高)
+  
+- note (string, 可选): 备注信息，最多 200 字符
+
+
+成功响应 (HTTP 200):
+{
+    "exerciseRecordId": 142,
+    "duration_min": 60,
+    "message": "运动记录已保存",
+    "status": "pending_ai_analysis"
+}
+
+失败响应 (HTTP 400):
+{
+    "error": "运动类型无效"
+}
+{
+    "error": "结束时间必须晚于开始时间"
+}
+{
+    "error": "运动时长必须在 1 分钟到 1440 分钟之间"
+}
+
+说明:
+- 新增记录会立即保存并返回记录ID
+- duration_min 自动计算，值为 (end_time - start_time) 的分钟数
+- status: pending_ai_analysis 表示 AI 分析处理中，稍后会自动更新 calories_burned 和其他字段
+- 建议前端在显示时，如果 calories_burned 为 null，则显示 "AI 分析中..."
+
+
+================================================================================
+2. 查询今天运动记录
+================================================================================
+
+请求方法: GET
+请求路径: /api/checkin/exercise
+身份验证: 需要
+
+查询参数: 无
+
+成功响应 (HTTP 200):
+{
+    "data": [
+        {
+            "exercise_record_id": 142,
+            "user_id": 5,
+            "activity_type": "跑步",
+            "start_time": "2024-03-20 07:00:00",
+            "end_time": "2024-03-20 08:00:00",
+            "duration_min": 60,
+            "intensity": "medium",
+            "calories_burned": 480,
+            "note": "早晨跑步锻炼",
+            "ai_recognition_flag": 1,
+            "suggestion": "保持这样的晨跑习惯，建议配合拉伸运动。",
+            "evaluation": "运动量适中，强度合理，有助于提升心肺功能。",
+            "created_at": "2024-03-20 08:15:30",
+            "updated_at": "2024-03-20 08:25:45"
+        },
+        {
+            "exercise_record_id": 141,
+            "user_id": 5,
+            "activity_type": "力量训练",
+            "start_time": "2024-03-20 18:30:00",
+            "end_time": "2024-03-20 19:30:00",
+            "duration_min": 60,
+            "intensity": "high",
+            "calories_burned": 420,
+            "note": "健身房力量训练",
+            "ai_recognition_flag": 1,
+            "suggestion": "注意休息恢复，明天不要过度训练。",
+            "evaluation": "运动强度高，消耗热量较多，有利于肌肉增长。",
+            "created_at": "2024-03-20 19:45:00",
+            "updated_at": "2024-03-20 19:55:12"
+        }
+    ],
+    "count": 2
+}
+
+失败响应 (HTTP 401):
+{
+    "error": "身份验证失败，请登录"
+}
+
+说明:
+- 返回当天所有运动记录，按开始时间倒序排列
+- count 表示今天运动记录总数
+- calories_burned 字段可能为 null，表示 AI 还在处理中
+- suggestion 和 evaluation 字段也可能为 null，同样表示 AI 处理中
+
+
+================================================================================
+3. 更新运动记录
+================================================================================
+
+请求方法: PUT
+请求路径: /api/checkin/exercise/:exerciseRecordId
+身份验证: 需要
+
+URL 参数:
+- exerciseRecordId: 运动记录ID，整数
+
+请求体 JSON（可传递需要修改的任何字段）:
+{
+    "activity_type": "骑车",
+    "start_time": "2024-03-20 07:00:00",
+    "end_time": "2024-03-20 08:30:00",
+    "intensity": "medium",
+    "note": "修改后的备注"
+}
+
+参数说明:
+- 所有字段均为可选，仅传递需要修改的字段
+- 若修改了 start_time 或 end_time，duration_min 会自动重新计算
+- 若修改了时间相关字段，AI 字段（calories_burned, suggestion, evaluation）会被重置为 null
+  并触发新的 AI 分析
+
+
+成功响应 (HTTP 200):
+{
+    "message": "运动记录已更新",
+    "updatedRecord": {
+        "exercise_record_id": 142,
+        "activity_type": "骑车",
+        "duration_min": 90,
+        "calories_burned": null,
+        "status": "pending_ai_analysis"
+    }
+}
+
+失败响应 (HTTP 400):
+{
+    "error": "结束时间必须晚于开始时间"
+}
+{
+    "error": "运动类型无效"
+}
+
+失败响应 (HTTP 403):
+{
+    "error": "只能修改自己的记录"
+}
+
+失败响应 (HTTP 404):
+{
+    "error": "运动记录不存在"
+}
+
+说明:
+- 只能修改自己的运动记录
+- 若 start_time 或 end_time 被修改，相关的 AI 分析字段会被清空并重新计算
+- 更新后应等待 AI 分析完成（通常 2-5 秒），再次查询记录时会得到最新的 AI 结果
+
+
+================================================================================
+4. 删除运动记录
+================================================================================
+
+请求方法: DELETE
+请求路径: /api/checkin/exercise/:exerciseRecordId
+身份验证: 需要
+
+URL 参数:
+- exerciseRecordId: 运动记录ID，整数
+
+成功响应 (HTTP 200):
+{
+    "message": "运动记录已删除"
+}
+
+失败响应 (HTTP 403):
+{
+    "error": "只能删除自己的记录"
+}
+
+失败响应 (HTTP 404):
+{
+    "error": "运动记录不存在"
+}
+
+说明:
+- 只能删除自己的运动记录
+- 删除后不可恢复，请谨慎操作
+
+
+================================================================================
+5. 获取运动统计（近7天或30天）
+================================================================================
+
+请求方法: GET
+请求路径: /api/checkin/exercise/statistics
+身份验证: 需要
+
+查询参数:
+- days (integer, 可选，默认为 7): 统计天数，可选值 7 或 30
+
+示例请求:
+GET /api/checkin/exercise/statistics?days=7
+GET /api/checkin/exercise/statistics?days=30
+
+成功响应 (HTTP 200):
+{
+    "data": {
+        "period": "7天",
+        "days": 7,
+        "total_exercise_count": 8,
+        "total_duration_min": 480,
+        "avg_duration_min": 60,
+        "total_calories_burned": 3200,
+        "avg_calories_burned": 400,
+        "activity_type_count": 4,
+        "breakdown": [
+            {
+                "activity_type": "跑步",
+                "count": 3,
+                "total_duration_min": 180,
+                "avg_duration_min": 60,
+                "total_calories_burned": 1200,
+                "avg_calories_burned": 400
+            },
+            {
+                "activity_type": "力量训练",
+                "count": 2,
+                "total_duration_min": 120,
+                "avg_duration_min": 60,
+                "total_calories_burned": 1000,
+                "avg_calories_burned": 500
+            },
+            {
+                "activity_type": "骑车",
+                "count": 2,
+                "total_duration_min": 120,
+                "avg_duration_min": 60,
+                "total_calories_burned": 600,
+                "avg_calories_burned": 300
+            },
+            {
+                "activity_type": "瑜伽",
+                "count": 1,
+                "total_duration_min": 60,
+                "avg_duration_min": 60,
+                "total_calories_burned": 400,
+                "avg_calories_burned": 400
+            }
+        ]
+    }
+}
+
+失败响应 (HTTP 400):
+{
+    "error": "days 必须是 7 或 30"
+}
+
+说明:
+- total_duration_min: 总运动时长（分钟）
+- avg_duration_min: 平均每次运动时长
+- total_calories_burned: 总消耗热量（kcal）
+- avg_calories_burned: 平均每次运动消耗热量
+- activity_type_count: 进行过的不同运动类型总数
+- breakdown: 按活动类型分类的详细统计
+
+
+================================================================================
+6. 按活动类型获取运动统计
+================================================================================
+
+请求方法: GET
+请求路径: /api/checkin/exercise/statistics/type
+身份验证: 需要
+
+查询参数:
+- days (integer, 可选，默认为 7): 统计天数，可选值 7 或 30
+
+示例请求:
+GET /api/checkin/exercise/statistics/type?days=7
+
+成功响应 (HTTP 200):
+{
+    "data": [
+        {
+            "activity_type": "跑步",
+            "count": 3,
+            "total_duration_min": 180,
+            "avg_duration_min": 60,
+            "total_calories_burned": 1200,
+            "avg_calories_burned": 400
+        },
+        {
+            "activity_type": "力量训练",
+            "count": 2,
+            "total_duration_min": 120,
+            "avg_duration_min": 60,
+            "total_calories_burned": 1000,
+            "avg_calories_burned": 500
+        },
+        {
+            "activity_type": "骑车",
+            "count": 2,
+            "total_duration_min": 120,
+            "avg_duration_min": 60,
+            "total_calories_burned": 600,
+            "avg_calories_burned": 300
+        }
+    ],
+    "period": "7天"
+}
+
+失败响应 (HTTP 400):
+{
+    "error": "days 必须是 7 或 30"
+}
+
+说明:
+- 返回按活动类型分类的统计数据
+- 仅包含当前用户执行过的活动类型
+- 按总消耗热量倒序排列
+
+
+================================================================================
+API 通用说明
+================================================================================
+
+身份验证:
+- 所有接口都需要在请求头中提供有效的 JWT token
+- 在 Authorization 头中放置 token: "Authorization: Bearer <your_token>"
+- 若未提供或 token 无效，将返回 401 错误
+
+用户隔离:
+- 所有操作仅涉及当前登录用户的数据
+- 无法查看、修改或删除其他用户的运动记录
+
+时间格式:
+- 所有时间字段使用格式: "YYYY-MM-DD HH:mm:ss"
+- 例如: "2024-03-20 14:30:00"
+
+运动类型:
+- 跑步: 有氧运动，高热量消耗
+- 步行: 低强度有氧运动
+- 力量训练: 肌肉训练，高强度
+- 球类: 如篮球、乒乓球等
+- 游泳: 全身有氧运动
+- 骑车: 腿部有氧运动
+- 瑜伽: 柔韧性和平衡性训练
+- 其他: 未分类的运动类型
+
+运动强度:
+- low: 低强度，HR 在最大值的 50-60%
+- medium: 中强度，HR 在最大值的 60-75%
+- high: 高强度，HR 在最大值的 75-90%
+
+AI 分析:
+- 所有新增和更新操作会自动触发 AI 分析
+- AI 会生成 calories_burned（消耗热量）、suggestion（建议）和 evaluation（评价）
+- 分析通常在 2-5 秒内完成
+- 建议前端定时查询接口以获取最新的 AI 结果
+
+错误处理:
+- 所有错误都会返回相应的 HTTP 状态码和错误信息
+- 前端应检查 HTTP 状态码来判断请求是否成功
+- 状态码 200: 请求成功
+- 状态码 400: 请求参数错误
+- 状态码 401: 身份验证失败
+- 状态码 403: 权限不足
+- 状态码 404: 资源不存在
+- 状态码 500: 服务器错误
+
+================================================================================
+更新记录
+================================================================================
+
+版本: 1.0
+日期: 2024-03-20
+描述: 初始版本，包含 6 个端点
+
+
+================================================================================
