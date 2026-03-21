@@ -1,3 +1,4 @@
+import { QueryResult } from 'mysql2';
 import pool from '../config/db.js';
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
@@ -14,7 +15,6 @@ function getBasicInfo(req: Request): any[] {
 // 检测当前日期是否存在
 async function detectDailyCheckin(req: Request, res: Response, sendResponse: boolean = true): Promise<Boolean | Response> {
     const [userId, today] = getBasicInfo(req).map(info => info.value);
-
     try {
         const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         if ((rows as any[]).length > 0) {
@@ -177,10 +177,30 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
     }
 }
 
+// 插入空的当前日期的打卡记录（如果已经存在则不操作）
+async function insertEmptyDailyCheckin(req: Request, res: Response): Promise<any> {
+    const [userId, today] = getBasicInfo(req).map(info => info.value);
+    const hasCheckedIn = await detectDailyCheckin(req, res, false);
+    if (hasCheckedIn) {
+        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        console.log('Found existing daily check-in:', rows);
+        return rows[0];
+    }
+    try {
+        await pool.execute('INSERT IGNORE INTO daily_checkin (user_id, checkin_date) VALUES (?, ?)', [userId, today]);
+        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        return rows[0];
+    } catch (error) {
+        console.error('Error inserting empty daily check-in:', error);
+        return null;
+    }
+}
+
 export {
     getDailyCheckin,
     detectDailyCheckin,
     deleteDailyCheckin,
     insertDailyCheckin,
-    updateDailyCheckin
+    updateDailyCheckin,
+    insertEmptyDailyCheckin
 }

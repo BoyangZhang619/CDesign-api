@@ -71,8 +71,8 @@ async function register(req: Request, res: Response): Promise<Response> {
         if (exists) {
             return sendError(res, '该邮箱已被注册', 400);
         }
-
         const hashedPassword = await bcrypt.hash(password, 10);
+        console.log('Registering user with hashed password:', hashedPassword);
         // await pool.execute('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
         await pool.execute('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [9876, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
         return sendResult(res, '注册成功');
@@ -85,6 +85,7 @@ async function register(req: Request, res: Response): Promise<Response> {
 async function login(req: Request, res: Response): Promise<Response> {
     try {
         const { email, password } = req.body;
+        console.log(req.body,req.user,env)
         if (!email || !password) {
             return sendError(res, '邮箱和密码不能为空', 400);
         }
@@ -164,7 +165,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
         }
 
         const [userRows] = await pool.execute(
-            'SELECT id, email, credits FROM users WHERE id = ? LIMIT 1',
+            'SELECT id, email, credits FROM user_account WHERE id = ? LIMIT 1',
             [payload.userId]
         );
 
@@ -219,10 +220,12 @@ async function refresh(req: Request, res: Response): Promise<Response> {
 
 // 获取当前登录用户信息
 async function me(req: Request, res: Response): Promise<Response> {
+    const userId = req.user?.userId ?? null;
+    console.log('me userId:', userId);
     try {
         const [rows] = await pool.execute(
             'SELECT * FROM user_account WHERE id = ? LIMIT 1',
-            [req.user.userId]
+            [userId]
         );
 
         if ((rows as any[]).length === 0) {
@@ -295,7 +298,7 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
 async function updateLastLoginTime(userId: number): Promise<void> {
     try {
         await pool.execute(
-            'UPDATE user_account SET last_login_at = NOW() WHERE id = ?',
+            'UPDATE user_account SET last_login_time = NOW() WHERE id = ?',
             [userId]
         );
     } catch (error) {

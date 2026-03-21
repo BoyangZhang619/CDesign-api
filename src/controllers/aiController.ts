@@ -3,11 +3,7 @@ import type { Request, Response } from 'express';
 import { sendError, sendResult } from '../util/response.js';
 import { openai } from "../services/openai.js";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-
-interface AuthUser {
-    id: number;
-}
-
+import { getUserIdFromReq, getUserById } from './sharedMethods.js';
 
 type ModelType = 'qwen3.5-flash' | 'qwen3.5-plus';
 type LanguageType = 'Chinese' | 'English' | 'Japanese' | 'French' | 'German';
@@ -32,10 +28,7 @@ interface ChatResult {
     };
 }
 
-interface UserRow {
-    id: number;
-    credits: number;
-}
+
 
 function buildMessages(meta: META): ChatCompletionMessageParam[] {
     const formatInstructionMap: Record<ResponseTextType, string> = {
@@ -81,27 +74,6 @@ function buildMetaFromReq(req: Request): META {
     };
 }
 
-function getUserIdFromReq(req: Request): number {
-    if (!req.user || !req.user.userId) {
-        throw new Error('未授权或用户信息无效');
-    }
-    return req.user.userId;
-}
-
-async function getUserById(userId: number): Promise<UserRow | null> {
-    const [rows] = await pool.execute(
-        'SELECT id, credits FROM user_account WHERE id = ? LIMIT 1',
-        [userId]
-    );
-
-    const userRows = rows as UserRow[];
-
-    if (!Array.isArray(userRows) || userRows.length === 0) {
-        return null;
-    }
-
-    return userRows[0];
-}
 
 async function commonChat(meta: META): Promise<ChatResult> {
     try {
