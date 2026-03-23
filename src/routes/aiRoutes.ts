@@ -4,7 +4,10 @@ import { commonChatHandler, streamChatHandler } from '../controllers/aiControlle
 
 const router = express.Router();
 
+// 单次输出纯文本输入输出对话接口
 router.post('/ptio/common', authMiddleware, commonChatHandler);
+
+// 流式输出纯文本输入输出对话接口
 router.post('/ptio/stream', authMiddleware, streamChatHandler);
 
 export default router;

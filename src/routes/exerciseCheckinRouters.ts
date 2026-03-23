@@ -6,7 +6,9 @@ import {
     updateExerciseRecord, 
     deleteExerciseRecord, 
     getExerciseStatistics,
-    getExerciseStatisticsByType
+    getExerciseStatisticsByType,
+    getSummary,
+    getAISummary
 } from "../controllers/exerciseCheckinController.js";
 
 const router = express.Router();
@@ -28,5 +30,11 @@ router.get("/checkin/exercise/statistics", authMiddleware, getExerciseStatistics
 
 // 按活动类型获取统计
 router.get("/checkin/exercise/statistics/type", authMiddleware, getExerciseStatisticsByType);
+
+// 获取运动总结
+router.get("/checkin/exercise/summary", authMiddleware, getSummary);
+
+// 获取AI分析总结
+router.get("/checkin/exercise/ai-summary", authMiddleware, getAISummary);
 
 export default router;

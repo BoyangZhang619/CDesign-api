@@ -2,11 +2,16 @@ import { QueryResult } from 'mysql2';
 import pool from '../config/db.js';
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
+import { getUserIdFromReq } from './sharedMethods.js';
+import { commonChat } from './aiController.js';
+import { getSummaryResult as getMealSummaryResult } from './mealCheckinController.js';
+import { getSummaryResult as getSleepSummaryResult } from './sleepCheckinController.js';
+import { getSummaryResult as getExerciseSummaryResult } from './exerciseCheckinController.js';
 
 // 返回基本信息
 function getBasicInfo(req: Request): any[] {
     return [
-        { label: '用户ID', value: req.user.userId },
+        { label: '用户ID', value: getUserIdFromReq(req) },
         { label: '当前日期', value: new Date().toISOString().split('T')[0] },
         { label: '请求携带的参数', value: req.body }
     ];
@@ -196,11 +201,87 @@ async function insertEmptyDailyCheckin(req: Request, res: Response): Promise<any
     }
 }
 
+// 获取AI分析总结
+async function getAISummary(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const mealData = await getMealSummaryResult(req, res);
+        const sleepData = await getSleepSummaryResult(req, res);
+        const exerciseData = await getExerciseSummaryResult(req, res);
+        const summaryData = {
+            meal: mealData,
+            sleep: sleepData,
+            exercise: exerciseData
+        };
+        const [rows] = await pool.execute(
+            'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
+            [userId]
+        );
+        calculateAISummary(summaryData, userId);
+        // 同步处理AI生成，异步返回
+        const result = {
+            records: rows as any[],
+            checkin_date: new Date().toISOString().split('T')[0],
+            message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
+        };
+        return sendResult(res, result);
+    } catch (error) {
+        return sendError(res, '获取AI分析总结时出错: ' + error);
+    }
+}
+
+async function calculateAISummary(summaryData: object, userId: number) {
+    // 在这里实现AI分析总结的计算逻辑
+    try {
+        const prompt = `请基于以下当日健康数据（睡眠，运动，饮食）进行AI分析总结：
+    ${JSON.stringify(summaryData, null, 2)}
+    请提供以下方面的AI分析总结(仅返回总结内容，不需要标题，不要与内容无关的评价)：
+    1.这是当天得到的睡眠，运动，饮食数据，请分析并评价这些数据。`;
+
+        const aiResult = await commonChat({
+            user_content: prompt,
+            model: 'qwen3.5-flash',
+            response_type: 'text'
+        });
+
+        if (aiResult.ok) {
+            const dailyCheckinId = (await pool.execute(
+                'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
+                [userId]
+            ))[0][0]?.id;
+
+            if (dailyCheckinId) {
+                const [existingRows] = await pool.execute(
+                    'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
+                    [dailyCheckinId]
+                );
+
+                if ((existingRows as any[]).length > 0) {
+                    await pool.execute(
+                        'UPDATE checkin_ai_summary SET total_ai_summary = ? WHERE daily_checkin_id = ?',
+                        [aiResult.content, dailyCheckinId]
+                    );
+                } else {
+                    await pool.execute(
+                        'INSERT INTO checkin_ai_summary (daily_checkin_id, total_ai_summary) VALUES (?, ?)',
+                        [dailyCheckinId, aiResult.content]
+                    );
+                }
+            }
+        } else {
+            console.error('AI分析总结失败:', aiResult.content);
+        }
+    } catch (error) {
+        console.error('计算AI分析总结失败:', error);
+    }
+}
+
 export {
     getDailyCheckin,
     detectDailyCheckin,
     deleteDailyCheckin,
     insertDailyCheckin,
     updateDailyCheckin,
-    insertEmptyDailyCheckin
+    insertEmptyDailyCheckin,
+    getAISummary
 }

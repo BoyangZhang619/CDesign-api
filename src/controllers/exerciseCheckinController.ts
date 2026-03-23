@@ -421,11 +421,109 @@ async function getExerciseStatisticsByType(req: Request, res: Response): Promise
     }
 }
 
+async function getSummaryResult(req: Request, res: Response): Promise<object> {
+    try {
+        const userId = getUserIdFromReq(req);
+        const [rows] = await pool.execute(
+            'SELECT * FROM checkin_exercise_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
+            [userId, userId]
+        );
+        
+        const result = {
+            records: rows as any[],
+            exercise_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.duration_min || 0), 0),
+            exercise_calories_burned: (rows as any[]).reduce((sum, record) => sum + (record.calories_burned || 0), 0),
+            checkin_date: new Date().toISOString().split('T')[0],
+            message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
+        };
+        return result;
+    } catch (error) {
+        throw new Error('获取打卡记录时出错: ' + error);
+    }
+}
+
+async function getSummary(req: Request, res: Response): Promise<Response> {
+    try {
+        const request = await getSummaryResult(req, res);
+        calculateAISummary(request, getUserIdFromReq(req));
+        return sendResult(res, request);
+    } catch (error) {
+        return sendError(res, '获取打卡记录时出错: ' + error);
+    }
+}
+
+async function getAISummary(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const [rows] = await pool.execute(
+            'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
+            [userId]
+        );
+        const result = {
+            records: rows as any[],
+            checkin_date: new Date().toISOString().split('T')[0],
+            message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
+        };
+        return sendResult(res, result);
+    } catch (error) {
+        return sendError(res, '获取AI分析总结时出错: ' + error);
+    }
+}
+
+async function calculateAISummary(summaryData: object,userId: number) {
+    // 在这里实现AI分析总结的计算逻辑
+    try {
+        const prompt = `请基于以下运动数据进行AI分析总结：
+
+    请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
+    1.这是当天得到的运动数据，请分析并评价这些数据。`;
+
+        const aiResult = await commonChat({
+            user_content: prompt,
+            model: 'qwen3.5-flash',
+            response_type: 'text'
+        });
+
+        if (aiResult.ok) {
+            const dailyCheckinId = (await pool.execute(
+                'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
+                [userId]
+            ))[0][0]?.id;
+
+            if (dailyCheckinId) {
+                const [existingRows] = await pool.execute(
+                    'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
+                    [dailyCheckinId]
+                );
+
+                if ((existingRows as any[]).length > 0) {
+                    await pool.execute(
+                        'UPDATE checkin_ai_summary SET exercise_ai_summary = ? WHERE daily_checkin_id = ?',
+                        [aiResult.content, dailyCheckinId]
+                    );
+                } else {
+                    await pool.execute(
+                        'INSERT INTO checkin_ai_summary (daily_checkin_id, exercise_ai_summary) VALUES (?, ?)',
+                        [dailyCheckinId, aiResult.content]
+                    );
+                }
+            }
+        } else {
+            console.error('AI分析总结失败:', aiResult.content);
+        }
+    } catch (error) {
+        console.error('计算AI分析总结失败:', error);
+    }
+}
+
 export {
     insertExerciseRecord,
     getExerciseRecords,
     updateExerciseRecord,
     deleteExerciseRecord,
     getExerciseStatistics,
-    getExerciseStatisticsByType
+    getExerciseStatisticsByType,
+    getSummary,
+    getAISummary,
+    getSummaryResult
 }

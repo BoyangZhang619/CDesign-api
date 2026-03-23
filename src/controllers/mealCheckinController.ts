@@ -173,6 +173,115 @@ async function getCheckInRecords(req: Request, res: Response): Promise<Response>
     }
 }
 
+async function getSummaryResult(req: Request, res: Response): Promise<object> {
+    try {
+        const userId = getUserIdFromReq(req);
+        const [rows] = await pool.execute(
+            'SELECT * FROM checkin_meal_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
+            [userId, userId]
+        );
+        const result = {
+            records: rows as any[],
+            meal_breakfast_type: (rows as any[]).find(record => record.meal_type.toLowerCase() === 'breakfast' || record.meal_type === '早餐')?.food_name || '无',
+            meal_lunch_type: (rows as any[]).find(record => record.meal_type.toLowerCase() === 'lunch' || record.meal_type === '午餐')?.food_name || '无',
+            meal_dinner_type: (rows as any[]).find(record => record.meal_type.toLowerCase() === 'dinner' || record.meal_type === '晚餐')?.food_name || '无',
+            meal_snack_type: (rows as any[]).find(record => record.meal_type.toLowerCase() === 'snack' || record.meal_type === '零食')?.food_name || '无',
+            meal_calories: (rows as any[]).reduce((sum, record) => sum + (record.calories || 0), 0),
+            meal_protein: (rows as any[]).reduce((sum, record) => sum + (record.protein_g || 0), 0),
+            meal_fat: (rows as any[]).reduce((sum, record) => sum + (record.fat_g || 0), 0),
+            meal_carbohydrate: (rows as any[]).reduce((sum, record) => sum + (record.carbohydrate_g || 0), 0),
+            meal_fiber: (rows as any[]).reduce((sum, record) => sum + (record.fiber_g || 0), 0),
+            meal_sugar: (rows as any[]).reduce((sum, record) => sum + (record.sugar_g || 0), 0),
+            meal_water: (rows as any[]).reduce((sum, record) => sum + (record.water_g || 0), 0),
+            checkin_date: new Date().toISOString().split('T')[0],
+            message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
+        };
+        return result;
+    } catch (error) {
+        throw new Error('获取打卡记录时出错: ' + error);
+    }
+}
+
+async function getSummary(req: Request, res: Response): Promise<Response> {
+    try {
+        const request = await getSummaryResult(req, res);
+        calculateAISummary(request, getUserIdFromReq(req));
+        return sendResult(res, request);
+    } catch (error) {
+        return sendError(res, '获取打卡记录时出错: ' + error);
+    }
+}
+
+async function getAISummary(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const [rows] = await pool.execute(
+            'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
+            [userId]
+        );
+        const result = {
+            records: rows as any[],
+            checkin_date: new Date().toISOString().split('T')[0],
+            message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
+        };
+        return sendResult(res, result);
+    } catch (error) {
+        return sendError(res, '获取AI分析总结时出错: ' + error);
+    }
+}
+
+async function calculateAISummary(summaryData: object,userId: number) {
+    // 在这里实现AI分析总结的计算逻辑
+    try {
+        const prompt = `请基于以下营养摄入数据进行AI分析总结：
+    热量: ${(summaryData as any).meal_calories} kcal
+    蛋白质: ${(summaryData as any).meal_protein} g
+    脂肪: ${(summaryData as any).meal_fat} g
+    碳水: ${(summaryData as any).meal_carbohydrate} g
+    纤维: ${(summaryData as any).meal_fiber} g
+    糖: ${(summaryData as any).meal_sugar} g
+
+    请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
+    1.这是当天得到的营养摄入数据，请分析并评价这些数据。`;
+
+        const aiResult = await commonChat({
+            user_content: prompt,
+            model: 'qwen3.5-flash',
+            response_type: 'text'
+        });
+
+        if (aiResult.ok) {
+            const dailyCheckinId = (await pool.execute(
+                'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
+                [userId]
+            ))[0][0]?.id;
+
+            if (dailyCheckinId) {
+                const [existingRows] = await pool.execute(
+                    'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
+                    [dailyCheckinId]
+                );
+
+                if ((existingRows as any[]).length > 0) {
+                    await pool.execute(
+                        'UPDATE checkin_ai_summary SET meal_ai_summary = ? WHERE daily_checkin_id = ?',
+                        [aiResult.content, dailyCheckinId]
+                    );
+                } else {
+                    await pool.execute(
+                        'INSERT INTO checkin_ai_summary (daily_checkin_id, meal_ai_summary) VALUES (?, ?)',
+                        [dailyCheckinId, aiResult.content]
+                    );
+                }
+            }
+        } else {
+            console.error('AI分析总结失败:', aiResult.content);
+        }
+    } catch (error) {
+        console.error('计算AI分析总结失败:', error);
+    }
+}
+
 // 通过limit 和 offset获取当天打卡记录
 async function getCheckInRecordsWithPagination(req: Request, res: Response): Promise<Response> {
     const todayCheckin = await insertEmptyDailyCheckin(req, res);
@@ -211,5 +320,8 @@ async function getCheckInRecordsWithPagination(req: Request, res: Response): Pro
 export {
     insertCheckInRecord,
     getCheckInRecords,
-    getCheckInRecordsWithPagination
+    getCheckInRecordsWithPagination,
+    getAISummary,
+    getSummary,
+    getSummaryResult
 }
