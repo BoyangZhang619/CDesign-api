@@ -13,6 +13,7 @@ import dailyCheckinRouters from './routes/dailyCheckinRouters.js';
 import mealCheckinRouters from './routes/mealCheckinRouters.js';
 import sleepCheckinRouters from './routes/sleepCheckinRouters.js';
 import exerciseCheckinRouters from './routes/exerciseCheckinRouters.js';
+import historyRouters from './routes/historyRouters.js';
 
 const allowOrigins = [
     'http://localhost:5173',
@@ -39,6 +40,7 @@ app.use('/api/daily-checkin', dailyCheckinRouters);
 app.use('/api/meal-checkin', mealCheckinRouters);
 app.use('/api/sleep-checkin', sleepCheckinRouters);
 app.use('/api/exercise-checkin', exerciseCheckinRouters);
+app.use('/api/history', historyRouters);
 
 app.get('/', (_, res) => { res.send('why are you here?'); });
 
