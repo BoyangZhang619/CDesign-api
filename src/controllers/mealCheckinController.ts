@@ -6,6 +6,8 @@ import { QueryResult } from "mysql2";
 import { commonChat } from "./aiController.js";
 import { getUserIdFromReq, getUserById } from "./sharedMethods.js";
 import { get } from "http";
+import { getCurrentTimeString } from '../util/dateTime.js';
+
 // 插入新的当前日期的打卡记录
 async function insertCheckInRecord(req: Request, res: Response): Promise<Response> {
     try {
@@ -69,7 +71,7 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
 进食来源: ${food_source}
 进食时段: ${meal_type}
 
-请返回以下格式的数据(仅返回数字，单位为：热量kcal,蛋白质g,脂肪g,碳水g,纤维g,糖g)：
+请返回以下格式的数据(仅返回数字，单位为：热量kcal,蛋白质g,脂肪g,碳水g,纤维g,糖g,如果所有数据都为零，则强制使热量值为1)：
 格式: 热量|蛋白质|脂肪|碳水|纤维|糖
 示例: 500|20|15|60|5|10`;
 
@@ -164,7 +166,7 @@ async function getCheckInRecords(req: Request, res: Response): Promise<Response>
         );
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return sendResult(res, result);
@@ -193,7 +195,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             meal_fiber: (rows as any[]).reduce((sum, record) => sum + (record.fiber_g || 0), 0),
             meal_sugar: (rows as any[]).reduce((sum, record) => sum + (record.sugar_g || 0), 0),
             meal_water: (rows as any[]).reduce((sum, record) => sum + (record.water_g || 0), 0),
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return result;
@@ -221,7 +223,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         );
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);
@@ -307,7 +309,7 @@ async function getCheckInRecordsWithPagination(req: Request, res: Response): Pro
 
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : isToday ? '今天还没有打卡记录' : '没有找到打卡记录'
         };
         return sendResult(res, result);

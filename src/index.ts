@@ -9,11 +9,12 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import healthInfoRouters from './routes/healthInfoRouters.js';
-import dailyCheckinRouters from './routes/dailyCheckinRouters.js';
-import mealCheckinRouters from './routes/mealCheckinRouters.js';
-import sleepCheckinRouters from './routes/sleepCheckinRouters.js';
-import exerciseCheckinRouters from './routes/exerciseCheckinRouters.js';
+import dailyCheckinRouters from './routes/checkin/dailyCheckinRouters.js';
+import mealCheckinRouters from './routes/checkin/mealCheckinRouters.js';
+import sleepCheckinRouters from './routes/checkin/sleepCheckinRouters.js';
+import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
+import { getCurrentTimeString } from './util/dateTime.js';
 
 const allowOrigins = [
     'http://localhost:5173',
@@ -50,7 +51,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
 function consoleLog(req: express.Request) {
     console.log('=============================== NEW REQUEST ===============================');
-    console.log('TIME:', new Date().toISOString());
+    console.log('TIME:', getCurrentTimeString());
     console.log('METHOD:', req.method);
     console.log('URL:', req.originalUrl);
     console.log('ORIGIN:', req.headers.origin);

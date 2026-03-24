@@ -1,5 +1,5 @@
 import express from 'express';
-import authMiddleware from '../middlewares/authMiddleware.js';
+import authMiddleware from '../../middlewares/authMiddleware.js';
 import {
     getDailyCheckin,
     getAISummary,
@@ -8,7 +8,7 @@ import {
     insertDailyCheckin,
     updateDailyCheckin,
     insertEmptyDailyCheckin
-} from '../controllers/dailyCheckinController.js';
+} from '../../controllers/dailyCheckinController.js';
 
 const router = express.Router();
 

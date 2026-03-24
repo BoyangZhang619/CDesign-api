@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middlewares/authMiddleware.js";
+import authMiddleware from "../../middlewares/authMiddleware.js";
 import { 
     insertExerciseRecord, 
     getExerciseRecords, 
@@ -9,7 +9,7 @@ import {
     getExerciseStatisticsByType,
     getSummary,
     getAISummary
-} from "../controllers/exerciseCheckinController.js";
+} from "../../controllers/exerciseCheckinController.js";
 
 const router = express.Router();
 

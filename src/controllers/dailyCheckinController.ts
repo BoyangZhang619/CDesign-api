@@ -7,12 +7,13 @@ import { commonChat } from './aiController.js';
 import { getSummaryResult as getMealSummaryResult } from './mealCheckinController.js';
 import { getSummaryResult as getSleepSummaryResult } from './sleepCheckinController.js';
 import { getSummaryResult as getExerciseSummaryResult } from './exerciseCheckinController.js';
+import { getCurrentTimeString,getCurrentDateString } from '../util/dateTime.js';
 
 // 返回基本信息
 function getBasicInfo(req: Request): any[] {
     return [
         { label: '用户ID', value: getUserIdFromReq(req) },
-        { label: '当前日期', value: new Date().toISOString().split('T')[0] },
+        { label: '当前日期', value: getCurrentDateString() },
         { label: '请求携带的参数', value: req.body }
     ];
 }
@@ -184,6 +185,7 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
 
 // 插入空的当前日期的打卡记录（如果已经存在则不操作）
 async function insertEmptyDailyCheckin(req: Request, res: Response): Promise<any> {
+    console.log('Inserting empty daily check-in, request info:', getBasicInfo(req));
     const [userId, today] = getBasicInfo(req).map(info => info.value);
     const hasCheckedIn = await detectDailyCheckin(req, res, false);
     if (hasCheckedIn) {
@@ -194,6 +196,7 @@ async function insertEmptyDailyCheckin(req: Request, res: Response): Promise<any
     try {
         await pool.execute('INSERT IGNORE INTO daily_checkin (user_id, checkin_date) VALUES (?, ?)', [userId, today]);
         const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        console.log('Inserted empty daily check-in, retrieved record:', rows);
         return rows[0];
     } catch (error) {
         console.error('Error inserting empty daily check-in:', error);
@@ -221,7 +224,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         // 同步处理AI生成，异步返回
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);

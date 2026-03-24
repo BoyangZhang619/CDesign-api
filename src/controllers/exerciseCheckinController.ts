@@ -5,6 +5,7 @@ import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
 import { commonChat } from "./aiController.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
+import { getCurrentTimeString } from '../util/dateTime.js';
 
 // 验证运动时间合理性
 function validateExerciseTime(startTime: string, endTime: string): { valid: boolean; message: string } {
@@ -140,7 +141,7 @@ async function generateExerciseAnalysisAsync(
 运动强度: ${intensity ?? '未记录'}
 备注: ${note ?? '未记录'}
 
-请返回以下格式的数据（用|分隔）：
+请返回以下格式的数据（用|分隔,如果输入的结果都为零，则强制使热量值为1）：
 格式: 消耗热量(kcal)|建议(简要文本，最多50字)|评价(简要文本，最多100字)
 示例: 250|保持规律运动习惯，建议逐步增加运动强度|运动时长充足，强度适中，效果显著`;
 
@@ -231,7 +232,7 @@ async function getExerciseRecords(req: Request, res: Response): Promise<Response
 
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取运动记录成功' : '今天还没有运动记录'
         };
         return sendResult(res, result);
@@ -433,7 +434,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             records: rows as any[],
             exercise_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.duration_min || 0), 0),
             exercise_calories_burned: (rows as any[]).reduce((sum, record) => sum + (record.calories_burned || 0), 0),
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return result;
@@ -461,7 +462,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         );
         const result = {
             records: rows as any[],
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: getCurrentTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);

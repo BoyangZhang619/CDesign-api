@@ -1,12 +1,12 @@
 import Express from "express";
-import authMiddleware from "../middlewares/authMiddleware.js";
+import authMiddleware from "../../middlewares/authMiddleware.js";
 import { 
     getCheckInRecords,
     insertCheckInRecord,
     getCheckInRecordsWithPagination,
     getSummary,
     getAISummary,
-} from "../controllers/mealCheckinController.js";
+} from "../../controllers/mealCheckinController.js";
 
 const router = Express.Router();
 
