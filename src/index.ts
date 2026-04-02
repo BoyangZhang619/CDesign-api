@@ -19,7 +19,8 @@ import { getCurrentTimeString } from './util/dateTime.js';
 const allowOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://cdw.zbyblq.xin'
+    'https://cdw.zbyblq.xin',
+    'https://localhost'
 ];
 const app = express();
 const PORT = Number(env.port || 8080);
