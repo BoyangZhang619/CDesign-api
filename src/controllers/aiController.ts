@@ -1,7 +1,7 @@
 import pool from '../config/db.js';
 import type { Request, Response } from 'express';
 import { sendError, sendResult } from '../util/response.js';
-import { openai } from "../services/openai.js";
+import { openai_compatible,openai_app } from "../services/openai.js";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getUserIdFromReq, getUserById } from './sharedMethods.js';
 
@@ -83,7 +83,7 @@ async function commonChat(meta: META): Promise<ChatResult> {
 
         const messages = buildMessages(meta);
 
-        const completion = await openai.chat.completions.create({
+        const completion = await openai_compatible.chat.completions.create({
             model: meta.model || 'qwen3.5-flash',
             messages,
             // @ts-ignore
@@ -134,7 +134,7 @@ async function streamChat(meta: META, res: Response): Promise<ChatResult> {
         res.setHeader('Connection', 'keep-alive');
 
         // @ts-ignore
-        const stream = await openai.chat.completions.create({
+        const stream = await openai_compatible.chat.completions.create({
             model: meta.model || 'qwen3.5-flash',
             messages,
             stream: true,

@@ -31,12 +31,22 @@ async function main() {
         if (modelInfo) {
             console.log(`   模型名称: ${modelInfo.model_name}`);
             console.log(`   模型类型: ${modelInfo.model_type}`);
+            console.log(`   缩放器类型: ${modelInfo.scaler_type}`);
             console.log(`   特征数量: ${modelInfo.feature_count}`);
-            console.log(`   R² 评分: ${modelInfo.r2_score.toFixed(4)}`);
-            console.log(`   RMSE: ${modelInfo.rmse.toFixed(4)}`);
-            console.log(`\n   特征列表:`);
+            console.log(`\n   模型性能指标:`);
+            console.log(`   ├─ 测试集 R²: ${modelInfo.r2_score.toFixed(4)}`);
+            console.log(`   ├─ 测试集 RMSE: ${modelInfo.rmse.toFixed(4)}`);
+            console.log(`   ├─ 训练集 R²: ${modelInfo.train_r2_score?.toFixed(4) || 'N/A'}`);
+            console.log(`   └─ 训练集 RMSE: ${modelInfo.train_rmse?.toFixed(4) || 'N/A'}`);
+            
+            console.log(`\n   特征列表 (共 ${modelInfo.feature_count} 个):`);
             modelInfo.feature_names.forEach((name, index) => {
-                console.log(`      ${index + 1}. ${name}`);
+                const range = modelInfo.feature_range?.[name];
+                if (range) {
+                    console.log(`      ${index + 1}. ${name.padEnd(30)} [${range.min.toFixed(2)}, ${range.max.toFixed(2)}]`);
+                } else {
+                    console.log(`      ${index + 1}. ${name}`);
+                }
             });
         }
 

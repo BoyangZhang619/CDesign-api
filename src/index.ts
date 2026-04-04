@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import aiAgentRouters from './routes/aiAgentRouters.js';
 import healthInfoRouters from './routes/healthInfoRouters.js';
 import dailyCheckinRouters from './routes/checkin/dailyCheckinRouters.js';
 import mealCheckinRouters from './routes/checkin/mealCheckinRouters.js';
@@ -15,6 +16,7 @@ import sleepCheckinRouters from './routes/checkin/sleepCheckinRouters.js';
 import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
 import characterAvatarRouters from './routes/characterAvatarRouters.js';
+import todolistRouters from './routes/todoListRouters.js';
 
 import { getCurrentTimeString } from './util/dateTime.js';
 
@@ -40,12 +42,14 @@ app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速
 app.use('/api/auth', authRoutes);
 app.use('/api/character-avatar', characterAvatarRouters);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai-agent', aiAgentRouters);
 app.use('/api/health-info', healthInfoRouters);
 app.use('/api/daily-checkin', dailyCheckinRouters);
 app.use('/api/meal-checkin', mealCheckinRouters);
 app.use('/api/sleep-checkin', sleepCheckinRouters);
 app.use('/api/exercise-checkin', exerciseCheckinRouters);
 app.use('/api/history', historyRouters);
+app.use('/api/tasks', todolistRouters);
 
 app.get('/', (_, res) => { res.send('why are you here?'); });
 

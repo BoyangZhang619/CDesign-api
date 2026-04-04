@@ -12,17 +12,30 @@
   ],
   "feature_count": 8,
   "model_type": "random_forest_regressor",
+  "scaler_type": "MinMaxScaler",
   "r2_score": 0.993662882205595,
   "rmse": 0.23474133676393963,
+  "train_r2_score": 0.9986874341265409,
+  "train_rmse": 0.10815270623917803,
   "scaler_min": [
-    -0.04093775238343717,
-    -11.42245940197619,
-    0.14678215830385744,
-    -0.34046690177261146,
+    5.174653198618543,
+    35.02980568266786,
+    -1.019512155820825,
+    3.1058269649965977,
     0.0,
     0.0,
     0.0,
-    -0.022642581166646556
+    0.3266889030812612
+  ],
+  "scaler_max": [
+    131.57761616910477,
+    38.09655378392243,
+    5.926237706436327,
+    12.228085101768126,
+    400.0,
+    10.0,
+    1.0,
+    14.75476583816529
   ],
   "scaler_scale": [
     0.007911206956703139,
@@ -35,13 +48,47 @@
     0.06930930604953667
   ],
   "feature_importances": {
-    "Heart_Rate_Variability": 0.0006202171916453905,
-    "Body_Temperature": 0.0006680002899427874,
-    "Movement_During_Sleep": 0.0030975263842597323,
-    "Sleep_Duration_Hours": 0.002941007124245345,
     "Caffeine_Intake_mg": 0.9882449325707455,
+    "Movement_During_Sleep": 0.0030975263842597323,
     "Stress_Level": 0.0030807374038194202,
+    "Sleep_Duration_Hours": 0.002941007124245345,
     "Bedtime_Consistency": 0.0007589898453335797,
+    "Body_Temperature": 0.0006680002899427874,
+    "Heart_Rate_Variability": 0.0006202171916453905,
     "Light_Exposure_hours": 0.0005885891900081467
+  },
+  "feature_range": {
+    "Heart_Rate_Variability": {
+      "min": 5.174653198618543,
+      "max": 147.05462981309444
+    },
+    "Body_Temperature": {
+      "min": 35.02980568266786,
+      "max": 38.09655378392243
+    },
+    "Movement_During_Sleep": {
+      "min": -1.019512155820825,
+      "max": 5.926237706436327
+    },
+    "Sleep_Duration_Hours": {
+      "min": 3.1058269649965977,
+      "max": 12.3646394543921
+    },
+    "Caffeine_Intake_mg": {
+      "min": 0.0,
+      "max": 400.0
+    },
+    "Stress_Level": {
+      "min": 0.0,
+      "max": 10.0
+    },
+    "Bedtime_Consistency": {
+      "min": 0.0,
+      "max": 1.0
+    },
+    "Light_Exposure_hours": {
+      "min": 0.3266889030812612,
+      "max": 14.75476583816529
+    }
   }
 }

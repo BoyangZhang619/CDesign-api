@@ -13,18 +13,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 interface ModelMetadata {
-    model_name: string;
-    feature_names: string[];
-    feature_count: number;
-    model_type: string;
-    r2_score: number;
-    rmse: number;
-    scaler_mean: number[];
-    scaler_scale: number[];
-    feature_importances: Record<string, number>;
-}
-
-interface PredictionInput {
+  model_name: string;
+  feature_names: string[];
+  feature_count: number;
+  model_type: string;
+  scaler_type: string;
+  r2_score: number;
+  rmse: number;
+  train_r2_score: number;
+  train_rmse: number;
+  scaler_min: number[];
+  scaler_max: number[];
+  scaler_scale: number[];
+  feature_importances: Record<string, number>;
+  feature_range: Record<string, { min: number; max: number }>;
+}interface PredictionInput {
     [key: string]: number;
 }
 
@@ -95,10 +98,18 @@ class SleepQualityModel {
             throw new Error("模型未初始化");
         }
 
+        // MinMaxScaler: (value - min) / (max - min) = (value - min) / scale
+        // metadata 中保存的 scaler_min 是最小值，scaler_scale 是 (max - min)
         return input.map((value, index) => {
-            const mean = this.metadata!.scaler_mean[index];
+            const min = this.metadata!.scaler_min[index];
             const scale = this.metadata!.scaler_scale[index];
-            return (value - mean) / scale;
+            
+            // 处理特殊情况（如果 scale = 0，则所有值都相同，归一化为 0）
+            if (scale === 0) {
+                return 0;
+            }
+            
+            return (value - min) / scale;
         });
     }
 
