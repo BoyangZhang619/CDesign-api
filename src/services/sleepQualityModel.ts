@@ -27,7 +27,9 @@ interface ModelMetadata {
   scaler_scale: number[];
   feature_importances: Record<string, number>;
   feature_range: Record<string, { min: number; max: number }>;
-}interface PredictionInput {
+}
+
+interface PredictionInput {
     [key: string]: number;
 }
 
