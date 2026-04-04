@@ -3,6 +3,7 @@
  */
 
 import { TodoListDAL } from './todoListDAL.js';
+import { getCurrentDateString } from '../util/dateTime.js';
 import type {
   Task,
   TaskStatistics,
@@ -35,11 +36,11 @@ export class TodoListService {
 
     // 验证日期格式
     if (!this.isValidDate(taskData.due_date)) {
-      throw new Error('截止日期格式错误，应为 YYYY-MM-DD');
+      taskData.due_date = getCurrentDateString();
     }
 
     if (taskData.due_time && !this.isValidTime(taskData.due_time)) {
-      throw new Error('截止时间格式错误，应为 HH:mm');
+      taskData.due_time = '00:00';
     }
 
     return TodoListDAL.createTask(userId, taskData);
@@ -78,11 +79,11 @@ export class TodoListService {
     }
 
     if (updateData.due_date && !this.isValidDate(updateData.due_date)) {
-      throw new Error('截止日期格式错误，应为 YYYY-MM-DD');
+      updateData.due_date = getCurrentDateString();
     }
 
     if (updateData.due_time && !this.isValidTime(updateData.due_time)) {
-      throw new Error('截止时间格式错误，应为 HH:mm');
+      updateData.due_time = '00:00';
     }
 
     return TodoListDAL.updateTask(userId, taskId, updateData);

@@ -263,24 +263,25 @@ export class TodoListDAL {
             queryParams.push(date);
         }
 
-        const query = `
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
-        SUM(CASE WHEN type = 'checkin_exercise' THEN 1 ELSE 0 END) as checkin_exercise,
-        SUM(CASE WHEN type = 'checkin_meal' THEN 1 ELSE 0 END) as checkin_meal,
-        SUM(CASE WHEN type = 'checkin_sleep' THEN 1 ELSE 0 END) as checkin_sleep,
-        SUM(CASE WHEN type = 'custom' THEN 1 ELSE 0 END) as custom_count,
-        SUM(CASE WHEN type = 'ai_suggested' THEN 1 ELSE 0 END) as ai_suggested,
-        SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority,
-        SUM(CASE WHEN priority = 'medium' THEN 1 ELSE 0 END) as medium_priority,
-        SUM(CASE WHEN priority = 'low' THEN 1 ELSE 0 END) as low_priority
-      FROM tasks ${whereClause}
-    `;
+        const query = [
+            "SELECT",
+            "COUNT(*) as total,",
+            "SUM(IF(status = 'completed', 1, 0)) as `completed`,",
+            "SUM(IF(status = 'pending', 1, 0)) as `pending`,",
+            "SUM(IF(status = 'overdue', 1, 0)) as `overdue`,",
+            "SUM(IF(type = 'checkin_exercise', 1, 0)) as `checkin_exercise`,",
+            "SUM(IF(type = 'checkin_meal', 1, 0)) as `checkin_meal`,",
+            "SUM(IF(type = 'checkin_sleep', 1, 0)) as `checkin_sleep`,",
+            "SUM(IF(type = 'custom', 1, 0)) as `custom_count`,",
+            "SUM(IF(type = 'ai_suggested', 1, 0)) as `ai_suggested`,",
+            "SUM(IF(priority = 'high', 1, 0)) as `high_p`,",
+            "SUM(IF(priority = 'medium', 1, 0)) as `medium_p`,",
+            "SUM(IF(priority = 'low', 1, 0)) as `low_p`",
+            `FROM tasks ${whereClause}`
+        ].join(" "); // 用 join(" ") 强制把所有内容压成一行，且每行之间必有一个空格
 
-        const [rows] = await pool.execute(query, queryParams) as any;
+        const [rows] = await pool.query(query, queryParams) as any;
+        console.log("Task Statistics Query Result:", rows);
         const stats = rows[0];
 
         const total = stats.total || 0;
