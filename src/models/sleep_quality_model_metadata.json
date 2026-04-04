@@ -1,0 +1,47 @@
+{
+  "model_name": "sleep_quality_random_forest",
+  "feature_names": [
+    "Heart_Rate_Variability",
+    "Body_Temperature",
+    "Movement_During_Sleep",
+    "Sleep_Duration_Hours",
+    "Caffeine_Intake_mg",
+    "Stress_Level",
+    "Bedtime_Consistency",
+    "Light_Exposure_hours"
+  ],
+  "feature_count": 8,
+  "model_type": "random_forest_regressor",
+  "r2_score": 0.993662882205595,
+  "rmse": 0.23474133676393963,
+  "scaler_min": [
+    -0.04093775238343717,
+    -11.42245940197619,
+    0.14678215830385744,
+    -0.34046690177261146,
+    0.0,
+    0.0,
+    0.0,
+    -0.022642581166646556
+  ],
+  "scaler_scale": [
+    0.007911206956703139,
+    0.3260782975918083,
+    0.14397293594374147,
+    0.10962198010699042,
+    0.0025,
+    0.1,
+    1.0,
+    0.06930930604953667
+  ],
+  "feature_importances": {
+    "Heart_Rate_Variability": 0.0006202171916453905,
+    "Body_Temperature": 0.0006680002899427874,
+    "Movement_During_Sleep": 0.0030975263842597323,
+    "Sleep_Duration_Hours": 0.002941007124245345,
+    "Caffeine_Intake_mg": 0.9882449325707455,
+    "Stress_Level": 0.0030807374038194202,
+    "Bedtime_Consistency": 0.0007589898453335797,
+    "Light_Exposure_hours": 0.0005885891900081467
+  }
+}

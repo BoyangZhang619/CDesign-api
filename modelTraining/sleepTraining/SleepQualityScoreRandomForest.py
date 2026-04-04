@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler,MinMaxScaler
 import skl2onnx
 from skl2onnx.common.data_types import FloatTensorType
 import onnx
@@ -11,8 +11,10 @@ import onnxruntime as ort
 import json
 import os
 
+cur_path = os.path.dirname(os.path.abspath(__file__))
+
 # 1. 加载数据
-df = pd.read_csv('wearable_tech_sleep_quality.csv')
+df = pd.read_csv(os.path.join(cur_path, './csv/wearable_tech_sleep_quality.csv'))
 
 # 2. 准备特征和目标
 # 假设我们要预测睡眠质量
@@ -27,7 +29,7 @@ feature_count = len(feature_names)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # 4. 标准化特征（可选但推荐）
-scaler = StandardScaler()
+scaler = MinMaxScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
@@ -59,9 +61,9 @@ print("✓ ONNX 模型验证通过")
 
 # 保存 ONNX 模型
 output_dir = "../../src/models"
-os.makedirs(output_dir, exist_ok=True)
+os.makedirs(os.path.join(cur_path, output_dir), exist_ok=True)
 
-onnx_model_path = os.path.join(output_dir, "sleep_quality_model.onnx")
+onnx_model_path = os.path.join(os.path.join(cur_path, output_dir), "sleep_quality_model.onnx")
 with open(onnx_model_path, "wb") as f:
     f.write(onnx_model.SerializeToString())
 
@@ -75,12 +77,12 @@ model_metadata = {
     "model_type": "random_forest_regressor",
     "r2_score": float(r2_score(y_test, predictions)),
     "rmse": float(np.sqrt(mean_squared_error(y_test, predictions))),
-    "scaler_mean": scaler.mean_.tolist(),
+    "scaler_min": scaler.min_.tolist(),
     "scaler_scale": scaler.scale_.tolist(),
     "feature_importances": importances.to_dict()
 }
 
-metadata_path = os.path.join(output_dir, "sleep_quality_model_metadata.json")
+metadata_path = os.path.join(os.path.join(cur_path, output_dir), "sleep_quality_model_metadata.json")
 with open(metadata_path, "w", encoding="utf-8") as f:
     json.dump(model_metadata, f, indent=2, ensure_ascii=False)
 
