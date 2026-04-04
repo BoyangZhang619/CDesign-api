@@ -14,6 +14,8 @@ import mealCheckinRouters from './routes/checkin/mealCheckinRouters.js';
 import sleepCheckinRouters from './routes/checkin/sleepCheckinRouters.js';
 import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
+import characterAvatarRouters from './routes/characterAvatarRouters.js';
+
 import { getCurrentTimeString } from './util/dateTime.js';
 
 const allowOrigins = [
@@ -36,6 +38,7 @@ app.use(cookieParser());
 app.use('/', rateLimit({ windowMs: 60000, max: 60 })); // 全局速率限制，每分钟每个IP最多60次请求
 app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速率限制，每分钟每个IP最多20次请求
 app.use('/api/auth', authRoutes);
+app.use('/api/character-avatar', characterAvatarRouters);
 app.use('/api/ai', aiRoutes);
 app.use('/api/health-info', healthInfoRouters);
 app.use('/api/daily-checkin', dailyCheckinRouters);
