@@ -41,6 +41,12 @@ aiChatRouters.delete('/sessions/:id/clear', AIChatController.clearSession);
 // 发送消息
 aiChatRouters.post('/sessions/:id/messages', AIChatController.sendMessage);
 
+// 发送消息（流式）
+aiChatRouters.post('/sessions/:id/messages/stream', AIChatController.sendMessageStream);
+
+// 发送消息（流式 + 编辑）
+aiChatRouters.post('/sessions/:id/messages/stream-edit', AIChatController.sendMessageStreamWithEdit);
+
 // 获取聊天历史
 aiChatRouters.get('/sessions/:id/messages', AIChatController.getChatHistory);
 

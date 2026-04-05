@@ -318,4 +318,130 @@ export class AIChatController {
       sendError(res, String(error instanceof Error ? error.message : error));
     }
   }
+
+  /**
+   * 流式发送消息（Server-Sent Events）
+   * POST /api/ai-chat/sessions/:id/messages/stream
+   */
+  static async sendMessageStream(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = getUserIdFromReq(req);
+      const sessionId = parseInt(String(req.params.id), 10);
+      const { content } = req.body;
+
+      if (!content) {
+        sendError(res, '消息内容不能为空', 400);
+        return;
+      }
+
+      // 设置 SSE 响应头
+      res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      // 从请求头获取 Origin，而不是使用通配符
+      const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+
+      // 发送初始连接事件
+      res.write('data: {"type":"connected"}\n\n');
+
+      // 流式处理消息
+      try {
+        const result = await AIChatService.sendMessageStream(
+          userId,
+          sessionId,
+          content,
+          (chunk: string) => {
+            // 每接收到数据块就发送给客户端
+            res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+          }
+        );
+
+        // 发送完成事件
+        res.write(`data: ${JSON.stringify({
+          type: 'done',
+          userMessageId: result.userMessageId,
+          aiMessageId: result.aiMessageId,
+          totalTokens: result.totalTokens
+        })}\n\n`);
+
+        res.end();
+      } catch (streamError) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: streamError instanceof Error ? streamError.message : String(streamError)
+        })}\n\n`);
+        res.end();
+      }
+    } catch (error) {
+      sendError(res, String(error instanceof Error ? error.message : error), 400);
+    }
+  }
+
+  /**
+   * 流式编辑并发送消息
+   * 用于实时编辑后立即发送
+   * POST /api/ai-chat/sessions/:id/messages/stream-edit
+   */
+  static async sendMessageStreamWithEdit(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = getUserIdFromReq(req);
+      const sessionId = parseInt(String(req.params.id), 10);
+      const { messageId, content } = req.body;
+
+      if (!content) {
+        sendError(res, '消息内容不能为空', 400);
+        return;
+      }
+
+      // 编辑原消息
+      if (messageId) {
+        await AIChatService.editMessage(userId, messageId, content);
+      }
+
+      // 设置 SSE 响应头
+      res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      // 从请求头获取 Origin，而不是使用通配符
+      const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+
+      res.write('data: {"type":"connected"}\n\n');
+
+      try {
+        const result = await AIChatService.sendMessageStream(
+          userId,
+          sessionId,
+          content,
+          (chunk: string) => {
+            res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+          }
+        );
+
+        res.write(`data: ${JSON.stringify({
+          type: 'done',
+          userMessageId: result.userMessageId,
+          aiMessageId: result.aiMessageId,
+          totalTokens: result.totalTokens
+        })}\n\n`);
+
+        res.end();
+      } catch (streamError) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: streamError instanceof Error ? streamError.message : String(streamError)
+        })}\n\n`);
+        res.end();
+      }
+    } catch (error) {
+      sendError(res, String(error instanceof Error ? error.message : error), 400);
+    }
+  }
 }

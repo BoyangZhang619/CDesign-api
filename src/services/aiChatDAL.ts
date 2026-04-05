@@ -181,43 +181,50 @@ export class AIChatDAL {
     content: string,
     messageData?: Partial<AIChatMessage>
   ): Promise<AIChatMessage> {
-    // 获取会话中的消息计数
-    const countQuery = 'SELECT COUNT(*) as count FROM ai_chat_messages WHERE session_id = ?';
-    const [countResult] = await pool.execute(countQuery, [sessionId]) as any;
-    const messageIndex = (countResult[0].count || 0) + 1;
+    try {
+      // 获取会话中的消息计数
+      const countQuery = 'SELECT COUNT(*) as count FROM ai_chat_messages WHERE session_id = ?';
+      const [countResult] = await pool.execute(countQuery, [sessionId]) as any;
+      const messageIndex = (countResult[0].count || 0) + 1;
 
-    const query = `
-      INSERT INTO ai_chat_messages (
-        session_id, user_id, message_index, role, content, content_type,
-        input_tokens, output_tokens, total_tokens, usage_tokens, model_name,
-        finish_reason, response_time_ms, error_message, metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+      const query = `
+        INSERT INTO ai_chat_messages (
+          session_id, user_id, message_index, role, content, content_type,
+          input_tokens, output_tokens, total_tokens, usage_tokens, model_name,
+          finish_reason, response_time_ms, error_message, metadata
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-    const values = [
-      sessionId,
-      userId,
-      messageIndex,
-      role,
-      content,
-      messageData?.content_type || 'text',
-      messageData?.input_tokens || 0,
-      messageData?.output_tokens || 0,
-      messageData?.total_tokens || 0,
-      messageData?.usage_tokens ? JSON.stringify(messageData.usage_tokens) : null,
-      messageData?.model_name || null,
-      messageData?.finish_reason || null,
-      messageData?.response_time_ms || null,
-      messageData?.error_message || null,
-      messageData?.metadata ? JSON.stringify(messageData.metadata) : null
-    ];
+      const values = [
+        sessionId,
+        userId,
+        messageIndex,
+        role,
+        content,
+        messageData?.content_type || 'text',
+        messageData?.input_tokens ?? 0,
+        messageData?.output_tokens ?? 0,
+        messageData?.total_tokens ?? 0,
+        messageData?.usage_tokens ? JSON.stringify(messageData.usage_tokens) : null,
+        messageData?.model_name ?? null,
+        messageData?.finish_reason ?? null,
+        messageData?.response_time_ms ?? null,
+        messageData?.error_message ?? null,
+        messageData?.metadata ? JSON.stringify(messageData.metadata) : null
+      ];
 
-    const [result] = await pool.execute(query, values) as any;
+      console.log('[addMessage] sessionId:', sessionId, 'role:', role, 'values:', values);
 
-    // 更新会话的消息计数和最后消息时间
-    await this.updateSessionStats(sessionId, messageData);
+      const [result] = await pool.execute(query, values) as any;
 
-    return this.getMessageById(result.insertId) as Promise<AIChatMessage>;
+      // 更新会话的消息计数和最后消息时间
+      await this.updateSessionStats(sessionId, messageData);
+
+      return this.getMessageById(result.insertId) as Promise<AIChatMessage>;
+    } catch (error) {
+      console.error('[addMessage] 错误:', error);
+      throw error;
+    }
   }
 
   /**
