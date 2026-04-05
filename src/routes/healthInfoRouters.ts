@@ -9,16 +9,18 @@ import {
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // 获取信息
-router.get('/get-health-info', authMiddleware, GetHealthInfo);
+router.get('/get-health-info', GetHealthInfo);
 
 // 检查是否存在
-router.post('/check-health-info', authMiddleware, CheckHealthInfo);
+router.post('/check-health-info', CheckHealthInfo);
 
 // 插入健康信息
-router.post('/insert-health-info', authMiddleware, InsertHealthInfo);
+router.post('/insert-health-info', InsertHealthInfo);
 
 // 更新健康信息
-router.post('/update-health-info', authMiddleware, UpdateHealthInfo);
+router.post('/update-health-info', UpdateHealthInfo);
 
 export default router;

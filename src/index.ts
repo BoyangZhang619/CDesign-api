@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
-import aiAgentRouters from './routes/aiAgentRouters.js';
+import { aiChatRouters } from './routes/aiChatRouters.js';
 import healthInfoRouters from './routes/healthInfoRouters.js';
 import dailyCheckinRouters from './routes/checkin/dailyCheckinRouters.js';
 import mealCheckinRouters from './routes/checkin/mealCheckinRouters.js';
@@ -42,7 +42,7 @@ app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速
 app.use('/api/auth', authRoutes);
 app.use('/api/character-avatar', characterAvatarRouters);
 app.use('/api/ai', aiRoutes);
-app.use('/api/ai-agent', aiAgentRouters);
+app.use('/api/ai-chat', aiChatRouters);
 app.use('/api/health-info', healthInfoRouters);
 app.use('/api/daily-checkin', dailyCheckinRouters);
 app.use('/api/meal-checkin', mealCheckinRouters);

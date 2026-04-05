@@ -18,7 +18,7 @@ router.use(authMiddleware);
 router.get('/get', getDailyCheckin);
 
 // 获取用户每日AI分析总结
-router.get('/ai-summary', authMiddleware, getAISummary);
+router.get('/ai-summary', getAISummary);
 
 // // 检测用户每日打卡信息是否存在
 // router.post('/detect',authMiddleware, (req, res, next) => {

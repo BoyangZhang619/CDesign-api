@@ -13,28 +13,30 @@ import {
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // 新增运动记录
-router.post("/checkin/exercise", authMiddleware, insertExerciseRecord);
+router.post("/checkin/exercise", insertExerciseRecord);
 
 // 查询今天所有运动记录
-router.get("/checkin/exercise", authMiddleware, getExerciseRecords);
+router.get("/checkin/exercise", getExerciseRecords);
 
 // 更新运动记录
-router.put("/checkin/exercise/:exerciseRecordId", authMiddleware, updateExerciseRecord);
+router.put("/checkin/exercise/:exerciseRecordId", updateExerciseRecord);
 
 // 删除运动记录
-router.delete("/checkin/exercise/:exerciseRecordId", authMiddleware, deleteExerciseRecord);
+router.delete("/checkin/exercise/:exerciseRecordId", deleteExerciseRecord);
 
 // 获取运动统计（近7天或30天）
-router.get("/checkin/exercise/statistics", authMiddleware, getExerciseStatistics);
+router.get("/checkin/exercise/statistics", getExerciseStatistics);
 
 // 按活动类型获取统计
-router.get("/checkin/exercise/statistics/type", authMiddleware, getExerciseStatisticsByType);
+router.get("/checkin/exercise/statistics/type", getExerciseStatisticsByType);
 
 // 获取运动总结
-router.get("/checkin/exercise/summary", authMiddleware, getSummary);
+router.get("/checkin/exercise/summary", getSummary);
 
 // 获取AI分析总结
-router.get("/checkin/exercise/ai-summary", authMiddleware, getAISummary);
+router.get("/checkin/exercise/ai-summary", getAISummary);
 
 export default router;

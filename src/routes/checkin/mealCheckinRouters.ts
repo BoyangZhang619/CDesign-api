@@ -10,10 +10,12 @@ import {
 
 const router = Express.Router();
 
-router.post("/checkin/meal", authMiddleware, insertCheckInRecord);
-router.get("/checkin/meal", authMiddleware, getCheckInRecords);
-router.get("/checkin/meal/paginated/:limit/:offset", authMiddleware, getCheckInRecordsWithPagination);
-router.get("/checkin/meal/summary", authMiddleware, getSummary);
-router.get("/checkin/meal/ai-summary", authMiddleware, getAISummary);
+router.use(authMiddleware);
+
+router.post("/checkin/meal", insertCheckInRecord);
+router.get("/checkin/meal", getCheckInRecords);
+router.get("/checkin/meal/paginated/:limit/:offset", getCheckInRecordsWithPagination);
+router.get("/checkin/meal/summary", getSummary);
+router.get("/checkin/meal/ai-summary", getAISummary);
 
 export default router;

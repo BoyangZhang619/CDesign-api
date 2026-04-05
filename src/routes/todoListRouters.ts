@@ -21,40 +21,42 @@ import {
 
 const router = Router();
 
+router.use(authMiddleware);
+
 // 获取任务列表
-router.get('/', authMiddleware, getTasks);
+router.get('/', getTasks);
 
 // 获取任务统计信息
-router.get('/stats', authMiddleware, getTaskStats);
+router.get('/stats', getTaskStats);
 
 // 创建任务
-router.post('/', authMiddleware, createTask);
+router.post('/', createTask);
 
 // 获取任务详情
-router.get('/:id', authMiddleware, getTask);
+router.get('/:id', getTask);
 
 // 更新任务
-router.put('/:id', authMiddleware, updateTask);
+router.put('/:id', updateTask);
 
 // 删除任务
-router.delete('/:id', authMiddleware, deleteTask);
+router.delete('/:id', deleteTask);
 
 // 标记任务为完成
-router.patch('/:id/complete', authMiddleware, completeTask);
+router.patch('/:id/complete', completeTask);
 
 // 标记任务为未完成
-router.patch('/:id/uncomplete', authMiddleware, uncompleteTask);
+router.patch('/:id/uncomplete', uncompleteTask);
 
 // 同步打卡状态
-router.post('/sync-checkin', authMiddleware, syncCheckin);
+router.post('/sync-checkin', syncCheckin);
 
 // 生成 AI 建议
-router.post('/ai-suggestions', authMiddleware, generateAISuggestions);
+router.post('/ai-suggestions', generateAISuggestions);
 
 // 接受 AI 建议
-router.post('/:id/accept-suggestion', authMiddleware, acceptSuggestion);
+router.post('/:id/accept-suggestion', acceptSuggestion);
 
 // 驳回 AI 建议
-router.post('/:id/reject-suggestion', authMiddleware, rejectSuggestion);
+router.post('/:id/reject-suggestion', rejectSuggestion);
 
 export default router;

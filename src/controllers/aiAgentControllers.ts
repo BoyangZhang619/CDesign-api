@@ -8,8 +8,8 @@ import axios from 'axios';
 
 async function callDashScope() {
     // 若没有配置环境变量，可用百炼API Key将下行替换为：apiKey='sk-xxx'。但不建议在生产环境中直接将API Key硬编码到代码中，以减少API Key泄露风险。
-    const apiKey = process.env.DASHSCOPE_API_KEY ?? process.env.OPENAI_API_KEY ?? 'sk-24ab4066c67e41738fc543b502cf39da';
-    const appId = '49200fbe087f4b1882b9a44ef9c91ef8';
+    const apiKey = process.env.DASHSCOPE_API_KEY ?? process.env.OPENAI_API_KEY ;
+    const appId = process.env.AI_AGENT_APP_ID;
 
     const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
 
