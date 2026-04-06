@@ -469,17 +469,20 @@ export class PortraitDAL {
    * 获取用户最近的 checkin 数据（运动、饮食、睡眠）
    * 用于健康画像的刷新和分析
    */
-  static async getLatestCheckinData(userId: number, days: number = 7): Promise<any> {
+  static async getLatestCheckinData(userId: number, days: number = 7, offset: number = 0): Promise<any> {
     try {
-      console.log('[PortraitDAL.getLatestCheckinData] 获取最近', days, '天的 checkin 数据，用户:', userId);
+      console.log('[PortraitDAL.getLatestCheckinData] 获取 checkin 数据，用户:', userId, '天数:', days, '偏移:', offset);
 
-      // 获取最近 N 天的运动打卡数据
+      // 获取指定时间范围的运动打卡数据
+      // offset 表示起始日期向后推移的天数，days 表示时间段长度
       const exerciseQuery = `
         SELECT 
           id, activity_type, start_time, end_time, duration_min, intensity,
           calories_burned, suggestion, evaluation, created_at
         FROM checkin_exercise_record
-        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        WHERE user_id = ? 
+          AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -488,7 +491,9 @@ export class PortraitDAL {
           id, meal_type, food_name, calories, protein_g, fat_g, 
           carbohydrate_g, fiber_g, sugar_g, meal_time, created_at
         FROM checkin_meal_record
-        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        WHERE user_id = ? 
+          AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -497,7 +502,9 @@ export class PortraitDAL {
           id, sleep_start_time, wake_up_time, sleep_duration_hours, 
           sleep_quality_score, sleep_feeling, suggestion, evaluation, created_at
         FROM checkin_sleep_record
-        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        WHERE user_id = ? 
+          AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -508,9 +515,9 @@ export class PortraitDAL {
         WHERE user_id = ?
       `;
 
-      const [exerciseData] = await pool.query(exerciseQuery, [userId, days]);
-      const [mealData] = await pool.query(mealQuery, [userId, days]);
-      const [sleepData] = await pool.query(sleepQuery, [userId, days]);
+      const [exerciseData] = await pool.query(exerciseQuery, [userId, offset + days, offset]);
+      const [mealData] = await pool.query(mealQuery, [userId, offset + days, offset]);
+      const [sleepData] = await pool.query(sleepQuery, [userId, offset + days, offset]);
       const [profileData] = await pool.query(profileQuery, [userId]);
 
       // 计算 BMI
