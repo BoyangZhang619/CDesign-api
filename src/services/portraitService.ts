@@ -4,6 +4,7 @@
  */
 
 import { PortraitDAL } from './portraitDAL.js';
+import { commonChat } from '../controllers/aiController.js';
 import type {
   PortraitData,
   RadarData,
@@ -26,7 +27,7 @@ export class PortraitService {
 
       // 1. 检查健康档案设置状态
       const setupStatus = await PortraitDAL.getSetupStatus(userId);
-      if (setupStatus?.userId != userId || !setupStatus) {
+      if (!setupStatus || setupStatus.userId !== userId) {
         throw new Error('用户未完成健康档案设置');
       }
 
@@ -444,6 +445,407 @@ export class PortraitService {
       return updated;
     } catch (error) {
       console.error('[PortraitService.updateUserProfile] 错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 从 checkin 数据刷新健康画像
+   * 获取运动、饮食、睡眠的打卡数据，使用 aiChat 分析并更新健康画像
+   * 
+   * 逻辑：
+   * - 如果用户已有数据（分数 > 0），直接返回现有数据
+   * - 如果用户无数据，调用 aiChat 分析并保存
+   */
+  static async refreshPortraitFromCheckin(userId: number): Promise<PortraitData> {
+    try {
+      console.log('[PortraitService.refreshPortraitFromCheckin] 从 checkin 刷新画像，用户:', userId);
+
+      // 1. 首先检查用户是否已有有效数据
+      const existingPortrait = await PortraitDAL.getPortrait(userId);
+      
+      // 如果用户已有数据（至少有一项分数 > 0），直接返回现有数据
+      if (existingPortrait && 
+          (existingPortrait.exerciseScore > 0 || 
+           existingPortrait.mealScore > 0 || 
+           existingPortrait.sleepScore > 0)) {
+        console.log('[PortraitService.refreshPortraitFromCheckin] 用户已有数据，直接返回现有数据');
+        
+        // 获取建议和时间轴
+        const recommendations = await this.generateRecommendations(userId, existingPortrait);
+        const timeline = await this.generateTimeline(userId);
+        
+        // 构建雷达图数据
+        const radarData = this.buildRadarData(
+          existingPortrait.exerciseScore,
+          existingPortrait.mealScore,
+          existingPortrait.sleepScore,
+          existingPortrait.cardioStatus,
+          existingPortrait.metabolism,
+          0
+        );
+        
+        return {
+          exerciseScore: existingPortrait.exerciseScore,
+          mealScore: existingPortrait.mealScore,
+          sleepScore: existingPortrait.sleepScore,
+          bmi: existingPortrait.bmi,
+          bmiStatus: existingPortrait.bmiStatus,
+          cardioLevel: existingPortrait.cardioLevel,
+          cardioStatus: existingPortrait.cardioStatus,
+          metabolism: existingPortrait.metabolism,
+          metabolismStatus: existingPortrait.metabolismStatus,
+          sleepQuality: existingPortrait.sleepQuality,
+          sleepQualityStatus: existingPortrait.sleepQualityStatus,
+          radarData,
+          recommendations,
+          timeline
+        };
+      }
+
+      // 2. 用户无数据，获取最近的打卡数据
+      const checkinData = await PortraitDAL.getLatestCheckinData(userId);
+
+      // 3. 使用 aiChat 分析打卡数据并生成新的评分
+      const analysisResult = await this.analyzeCheckinDataWithAI(userId, checkinData);
+
+      // 4. 更新健康画像（基于 upsert，因为每个用户只有一条记录）
+      const updatedPortrait = await PortraitDAL.upsertPortrait(userId, {
+        exerciseScore: analysisResult.exerciseScore,
+        mealScore: analysisResult.mealScore,
+        sleepScore: analysisResult.sleepScore,
+        metabolism: analysisResult.metabolism,
+        bmi: analysisResult.bmi,
+        bmiStatus: analysisResult.bmiStatus,
+        cardioLevel: analysisResult.cardioLevel,
+        cardioStatus: analysisResult.cardioStatus,
+        sleepQuality: analysisResult.sleepQuality,
+        sleepQualityStatus: analysisResult.sleepQualityStatus,
+        radarData: null // 会在 getPortrait 中重新生成
+      });
+
+      // 5. 重新生成建议和时间轴
+      const recommendations = await this.generateRecommendations(userId, updatedPortrait);
+      const timeline = await this.generateTimeline(userId);
+
+      // 6. 构建完整响应
+      const radarData = this.buildRadarData(
+        updatedPortrait.exerciseScore,
+        updatedPortrait.mealScore,
+        updatedPortrait.sleepScore,
+        updatedPortrait.cardioStatus,
+        updatedPortrait.metabolism,
+        0
+      );
+
+      return {
+        exerciseScore: updatedPortrait.exerciseScore,
+        mealScore: updatedPortrait.mealScore,
+        sleepScore: updatedPortrait.sleepScore,
+        bmi: updatedPortrait.bmi,
+        bmiStatus: updatedPortrait.bmiStatus,
+        cardioLevel: updatedPortrait.cardioLevel,
+        cardioStatus: updatedPortrait.cardioStatus,
+        metabolism: updatedPortrait.metabolism,
+        metabolismStatus: updatedPortrait.metabolismStatus,
+        sleepQuality: updatedPortrait.sleepQuality,
+        sleepQualityStatus: updatedPortrait.sleepQualityStatus,
+        radarData,
+        recommendations,
+        timeline
+      };
+    } catch (error) {
+      console.error('[PortraitService.refreshPortraitFromCheckin] 错误:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 使用 aiChat 分析 checkin 数据
+   */
+  private static async analyzeCheckinDataWithAI(userId: number, checkinData: any): Promise<any> {
+    console.log('[PortraitService.analyzeCheckinDataWithAI] 分析 checkin 数据，用户:', userId);
+
+    try {
+      // 获取用户的健康档案设置信息和个人资料，用于提供背景信息给 AI
+      const setupStatus = await PortraitDAL.getSetupStatus(userId);
+      const userProfile = await PortraitDAL.getUserProfile(userId);
+      
+      // 构建包含用户背景信息的 AI 分析提示
+      const analysisPrompt = `
+请根据以下用户的健康信息和最近的打卡数据进行综合分析，并返回 JSON 格式的评分结果。
+
+【用户背景信息】
+年龄: ${userProfile?.age || '未知'}岁
+性别: ${userProfile?.gender === 'male' ? '男' : '女'}
+身高: ${userProfile?.heightCm || '未知'}cm
+体重: ${userProfile?.currentWeightKg || '未知'}kg
+目标体重: ${userProfile?.targetWeightKg || '未知'}kg
+活动级别: ${userProfile?.activityLevel || '未知'}
+健康目标: ${userProfile?.healthGoals || '未知'}
+饮食偏好: ${userProfile?.dietaryPreferences || '未知'}
+过敏信息: ${userProfile?.allergies || '无'}
+作息习惯: ${userProfile?.workRestHabit || '未知'}
+
+【最近打卡数据统计】
+运动数据（最近7天）:
+- 总记录数: ${checkinData.exerciseData?.length || 0}条
+- 平均时长: ${checkinData.exerciseData && checkinData.exerciseData.length > 0 ? Math.round(checkinData.exerciseData.reduce((sum: number, r: any) => sum + (r.duration_min || 0), 0) / checkinData.exerciseData.length) : 0}分钟
+- 强度分布: ${checkinData.exerciseData && checkinData.exerciseData.length > 0 ? checkinData.exerciseData.map((e: any) => e.intensity).filter((v: any) => v).join(', ') : '暂无'}
+- 总消耗热量: ${checkinData.exerciseData && checkinData.exerciseData.length > 0 ? Math.round(checkinData.exerciseData.reduce((sum: number, r: any) => sum + (r.calories_burned || 0), 0)) : 0}大卡
+
+饮食数据（最近7天）:
+- 记录总数: ${checkinData.mealData?.length || 0}条
+- 平均热量/餐: ${checkinData.mealData && checkinData.mealData.length > 0 ? Math.round(checkinData.mealData.reduce((sum: number, m: any) => sum + (m.calories || 0), 0) / checkinData.mealData.length) : 0}大卡
+- 餐次分布: ${checkinData.mealData && checkinData.mealData.length > 0 ? [...new Set(checkinData.mealData.map((m: any) => m.meal_type))].join(', ') : '暂无'}
+
+睡眠数据（最近7天）:
+- 记录总数: ${checkinData.sleepData?.length || 0}条
+- 平均睡眠时长: ${checkinData.sleepData && checkinData.sleepData.length > 0 ? Math.round(checkinData.sleepData.reduce((sum: number, s: any) => sum + (Number(s.sleep_duration_hours) || 0), 0) / checkinData.sleepData.length * 10) / 10 : 0}小时
+- 平均睡眠质量评分: ${checkinData.sleepData && checkinData.sleepData.length > 0 ? Math.round(checkinData.sleepData.reduce((sum: number, s: any) => sum + (s.sleep_quality_score || 0), 0) / checkinData.sleepData.length) : 0}/100
+
+身体指标:
+- BMI: ${checkinData.bmi?.toFixed(1) || '未知'}
+
+【分析要求】
+根据上述用户背景和打卡数据，请分析用户的健康状况，并返回以下 JSON 格式的结果（只返回JSON，不要其他文字）：
+
+{
+  "exerciseScore": 0-100 的数字,
+  "mealScore": 0-100 的数字,
+  "sleepScore": 0-100 的数字,
+  "metabolism": 0-100 的数字,
+  "bmi": 数字,
+  "bmiStatus": "underweight|normal|overweight|obese 中的一个",
+  "cardioLevel": "用户心肺功能描述，如'良好'、'待改善'等",
+  "cardioStatus": "excellent|good|normal|poor 中的一个",
+  "sleepQuality": "用户睡眠质量描述，如'优质'、'良好'等",
+  "sleepQualityStatus": "excellent|good|normal|poor 中的一个"
+}`;
+
+      // 调用 aiChat 获取分析结果
+      const aiResult = await commonChat({
+        user_content: analysisPrompt,
+        system_content: '你是一个专业的健康分析师，根据用户提供的健康数据和打卡信息进行分析，必须返回有效的JSON格式数据。',
+        model: 'qwen3.5-plus'
+      });
+
+      // 检查 AI 调用是否成功
+      if (!aiResult.ok) {
+        console.warn('[PortraitService.analyzeCheckinDataWithAI] AI 调用失败:', aiResult.content);
+        // 使用本地计算作为备选方案
+        return {
+          exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
+          mealScore: this.calculateMealScoreFromCheckin(checkinData.mealData),
+          sleepScore: this.calculateSleepScoreFromCheckin(checkinData.sleepData),
+          metabolism: Math.round(Math.random() * 100),
+          bmi: checkinData.bmi || 0,
+          bmiStatus: this.calculateBmiStatus(checkinData.bmi || 0),
+          cardioLevel: '待评估',
+          cardioStatus: 'normal' as CardioStatus,
+          sleepQuality: '待评估',
+          sleepQualityStatus: 'normal' as SleepQualityStatus
+        };
+      }
+
+      // 解析 AI 的 JSON 响应
+      let result;
+      try {
+        // 尝试从响应中提取 JSON
+        const jsonMatch = aiResult.content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+          console.log('[PortraitService.analyzeCheckinDataWithAI] AI 分析结果:', result);
+          return result;
+        } else {
+          throw new Error('无法从 AI 响应中提取 JSON');
+        }
+      } catch (parseError) {
+        console.warn('[PortraitService.analyzeCheckinDataWithAI] AI 返回格式解析失败，使用本地计算:', parseError);
+        // 如果 AI 响应格式不正确，使用本地计算作为备选方案
+        return {
+          exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
+          mealScore: this.calculateMealScoreFromCheckin(checkinData.mealData),
+          sleepScore: this.calculateSleepScoreFromCheckin(checkinData.sleepData),
+          metabolism: Math.round(Math.random() * 100),
+          bmi: checkinData.bmi || 0,
+          bmiStatus: this.calculateBmiStatus(checkinData.bmi || 0),
+          cardioLevel: '待评估',
+          cardioStatus: 'normal' as CardioStatus,
+          sleepQuality: '待评估',
+          sleepQualityStatus: 'normal' as SleepQualityStatus
+        };
+      }
+    } catch (error) {
+      console.error('[PortraitService.analyzeCheckinDataWithAI] AI 分析失败:', error);
+      // 返回基于本地计算的备选结果，确保不中断主流程
+      return {
+        exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
+        mealScore: this.calculateMealScoreFromCheckin(checkinData.mealData),
+        sleepScore: this.calculateSleepScoreFromCheckin(checkinData.sleepData),
+        metabolism: Math.round(Math.random() * 100),
+        bmi: checkinData.bmi || 0,
+        bmiStatus: this.calculateBmiStatus(checkinData.bmi || 0),
+        cardioLevel: '待评估',
+        cardioStatus: 'normal' as CardioStatus,
+        sleepQuality: '待评估',
+        sleepQualityStatus: 'normal' as SleepQualityStatus
+      };
+    }
+  }
+
+  /**
+   * 根据运动 checkin 数据计算运动评分
+   */
+  private static calculateExerciseScoreFromCheckin(exerciseData: any[]): number {
+    if (!exerciseData || exerciseData.length === 0) return 0;
+
+    // 根据运动频率、时长、强度计算评分
+    const totalMinutes = exerciseData.reduce((sum: number, record: any) => sum + (record.duration_min || 0), 0);
+    const frequencyScore = Math.min(exerciseData.length * 15, 40); // 运动频次评分，最高40分
+    
+    // 时长评分（每周建议150分钟中等强度运动）
+    const durationScore = Math.min((totalMinutes / 150) * 40, 40); // 最高40分
+    
+    // 强度评分
+    const highIntensityCount = exerciseData.filter((r: any) => r.intensity === 'high').length;
+    const intensityScore = Math.min((highIntensityCount / Math.max(exerciseData.length, 1)) * 20, 20); // 最高20分
+
+    const score = frequencyScore + durationScore + intensityScore;
+    return Math.round(Math.max(0, Math.min(100, score)));
+  }
+
+  /**
+   * 根据饮食 checkin 数据计算饮食评分
+   */
+  private static calculateMealScoreFromCheckin(mealData: any[]): number {
+    if (!mealData || mealData.length === 0) return 0;
+
+    // 根据饮食规律性和营养均衡度评分
+    const frequencyScore = Math.min(mealData.length * 15, 40); // 进餐频次评分，最高40分
+    
+    // 营养均衡度：检查是否包含足够的营养成分
+    const balancedMeals = mealData.filter((m: any) => {
+      const hasProtein = m.protein_g && Number(m.protein_g) > 0;
+      const hasFat = m.fat_g && Number(m.fat_g) > 0;
+      const hasCarbs = m.carbohydrate_g && Number(m.carbohydrate_g) > 0;
+      return hasProtein && hasFat && hasCarbs;
+    }).length;
+    
+    const balanceScore = (balancedMeals / Math.max(mealData.length, 1)) * 40; // 最高40分
+    
+    // 热量适度性评分
+    const avgCalories = mealData.reduce((sum: number, m: any) => sum + (Number(m.calories) || 0), 0) / mealData.length;
+    let calorieScore = 0;
+    if (avgCalories >= 400 && avgCalories <= 800) {
+      calorieScore = 20; // 最高20分
+    } else if (avgCalories >= 300 && avgCalories <= 900) {
+      calorieScore = 15;
+    } else {
+      calorieScore = 5;
+    }
+
+    const score = frequencyScore + balanceScore + calorieScore;
+    return Math.round(Math.max(0, Math.min(100, score)));
+  }
+
+  /**
+   * 根据睡眠 checkin 数据计算睡眠评分
+   */
+  private static calculateSleepScoreFromCheckin(sleepData: any[]): number {
+    if (!sleepData || sleepData.length === 0) return 0;
+
+    // 优先使用 AI 评分（sleep_quality_score），如果没有则使用时长推算
+    const hasAiScores = sleepData.some(s => s.sleep_quality_score);
+    
+    if (hasAiScores) {
+      // 使用 AI 给出的睡眠质量评分
+      const avgScore = sleepData.reduce((sum: number, record: any) => {
+        return sum + (record.sleep_quality_score || 0);
+      }, 0) / sleepData.length;
+      
+      return Math.round(Math.max(0, Math.min(100, avgScore)));
+    }
+
+    // 备选方案：根据平均睡眠时长和规律性评分
+    const averageDuration = sleepData.reduce((sum: number, record: any) => sum + (Number(record.sleep_duration_hours) || 0), 0) / sleepData.length;
+
+    // 理想睡眠 7-8 小时
+    let score = 0;
+    if (averageDuration >= 7 && averageDuration <= 8) {
+      score = 90;
+    } else if (averageDuration >= 6 && averageDuration <= 9) {
+      score = 75;
+    } else if (averageDuration >= 5 && averageDuration <= 10) {
+      score = 50;
+    } else {
+      score = 30;
+    }
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  /**
+   * 强制刷新健康画像数据
+   * 忽略现有数据，强制调用 AI 重新分析打卡数据
+   */
+  static async forceRefreshPortrait(userId: number): Promise<PortraitData> {
+    try {
+      console.log('[PortraitService.forceRefreshPortrait] 强制刷新画像，用户:', userId);
+
+      // 1. 获取最近的打卡数据
+      const checkinData = await PortraitDAL.getLatestCheckinData(userId);
+
+      // 2. 使用 aiChat 分析打卡数据并生成新的评分
+      const analysisResult = await this.analyzeCheckinDataWithAI(userId, checkinData);
+
+      // 3. 更新健康画像
+      const updatedPortrait = await PortraitDAL.upsertPortrait(userId, {
+        exerciseScore: analysisResult.exerciseScore,
+        mealScore: analysisResult.mealScore,
+        sleepScore: analysisResult.sleepScore,
+        metabolism: analysisResult.metabolism,
+        bmi: analysisResult.bmi,
+        bmiStatus: analysisResult.bmiStatus,
+        cardioLevel: analysisResult.cardioLevel,
+        cardioStatus: analysisResult.cardioStatus,
+        sleepQuality: analysisResult.sleepQuality,
+        sleepQualityStatus: analysisResult.sleepQualityStatus,
+        radarData: null
+      });
+
+      // 4. 重新生成建议和时间轴
+      const recommendations = await this.generateRecommendations(userId, updatedPortrait);
+      const timeline = await this.generateTimeline(userId);
+
+      // 5. 构建完整响应
+      const radarData = this.buildRadarData(
+        updatedPortrait.exerciseScore,
+        updatedPortrait.mealScore,
+        updatedPortrait.sleepScore,
+        updatedPortrait.cardioStatus,
+        updatedPortrait.metabolism,
+        0
+      );
+
+      return {
+        exerciseScore: updatedPortrait.exerciseScore,
+        mealScore: updatedPortrait.mealScore,
+        sleepScore: updatedPortrait.sleepScore,
+        bmi: updatedPortrait.bmi,
+        bmiStatus: updatedPortrait.bmiStatus,
+        cardioLevel: updatedPortrait.cardioLevel,
+        cardioStatus: updatedPortrait.cardioStatus,
+        metabolism: updatedPortrait.metabolism,
+        metabolismStatus: updatedPortrait.metabolismStatus,
+        sleepQuality: updatedPortrait.sleepQuality,
+        sleepQualityStatus: updatedPortrait.sleepQualityStatus,
+        radarData,
+        recommendations,
+        timeline
+      };
+    } catch (error) {
+      console.error('[PortraitService.forceRefreshPortrait] 错误:', error);
       throw error;
     }
   }

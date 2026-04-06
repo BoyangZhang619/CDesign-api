@@ -464,4 +464,75 @@ export class PortraitDAL {
       throw error;
     }
   }
+
+  /**
+   * 获取用户最近的 checkin 数据（运动、饮食、睡眠）
+   * 用于健康画像的刷新和分析
+   */
+  static async getLatestCheckinData(userId: number, days: number = 7): Promise<any> {
+    try {
+      console.log('[PortraitDAL.getLatestCheckinData] 获取最近', days, '天的 checkin 数据，用户:', userId);
+
+      // 获取最近 N 天的运动打卡数据
+      const exerciseQuery = `
+        SELECT 
+          id, activity_type, start_time, end_time, duration_min, intensity,
+          calories_burned, suggestion, evaluation, created_at
+        FROM checkin_exercise_record
+        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        ORDER BY created_at DESC
+      `;
+
+      const mealQuery = `
+        SELECT 
+          id, meal_type, food_name, calories, protein_g, fat_g, 
+          carbohydrate_g, fiber_g, sugar_g, meal_time, created_at
+        FROM checkin_meal_record
+        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        ORDER BY created_at DESC
+      `;
+
+      const sleepQuery = `
+        SELECT 
+          id, sleep_start_time, wake_up_time, sleep_duration_hours, 
+          sleep_quality_score, sleep_feeling, suggestion, evaluation, created_at
+        FROM checkin_sleep_record
+        WHERE user_id = ? AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        ORDER BY created_at DESC
+      `;
+
+      // 获取用户档案（包括 BMI 计算所需的身高体重）
+      const profileQuery = `
+        SELECT current_weight_kg, height_cm
+        FROM user_profile
+        WHERE user_id = ?
+      `;
+
+      const [exerciseData] = await pool.query(exerciseQuery, [userId, days]);
+      const [mealData] = await pool.query(mealQuery, [userId, days]);
+      const [sleepData] = await pool.query(sleepQuery, [userId, days]);
+      const [profileData] = await pool.query(profileQuery, [userId]);
+
+      // 计算 BMI
+      let bmi = 0;
+      if ((profileData as any[])[0]) {
+        const profile = (profileData as any[])[0];
+        if (profile.current_weight_kg && profile.height_cm) {
+          const heightM = profile.height_cm / 100;
+          bmi = profile.current_weight_kg / (heightM * heightM);
+          bmi = Math.round(bmi * 100) / 100;
+        }
+      }
+
+      return {
+        exerciseData: (exerciseData as any[]) || [],
+        mealData: (mealData as any[]) || [],
+        sleepData: (sleepData as any[]) || [],
+        bmi
+      };
+    } catch (error) {
+      console.error('[PortraitDAL.getLatestCheckinData] 错误:', error);
+      throw error;
+    }
+  }
 }

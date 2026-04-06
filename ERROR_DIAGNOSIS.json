@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "message": "Unknown column 'ai_score' in 'field list'",
+  "data": null,
+  "timestamp": "2026-04-06T10:00:00Z",
+  "error_details": {
+    "endpoint": "/api/health/refresh-from-checkin",
+    "method": "POST",
+    "status": 500,
+    "issue": "The query in getLatestCheckinData is using 'ai_score' column which doesn't exist in the checkin tables"
+  }
+}

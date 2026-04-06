@@ -26,7 +26,7 @@ export class PortraitController {
 
       const data = await PortraitService.getPortrait(userId);
 
-      sendResult(res, { data }, '获取成功', 200);
+      sendResult(res, data, '获取成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -50,7 +50,7 @@ export class PortraitController {
 
       const data = await PortraitService.getSetupStatus(userId);
 
-      sendResult(res, { data }, '查询成功', 200);
+      sendResult(res, data, '查询成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       sendError(res, message, 500);
@@ -79,7 +79,7 @@ export class PortraitController {
         healthGoalsCompleted
       );
 
-      sendResult(res, { data }, '更新成功', 200);
+      sendResult(res, data, '更新成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       sendError(res, message, 500);
@@ -102,7 +102,7 @@ export class PortraitController {
       // TODO: 实现历史数据查询逻辑
       // 这需要在 PortraitService 中实现历史数据的查询和聚合
 
-      sendResult(res, { data: [] }, '获取成功', 200);
+      sendResult(res, [], '获取成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       sendError(res, message, 500);
@@ -120,7 +120,7 @@ export class PortraitController {
 
       const data = await PortraitService.getUserProfile(userId);
 
-      sendResult(res, { data }, '获取成功', 200);
+      sendResult(res, data, '获取成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       sendError(res, message, error instanceof Error && message.includes('不存在') ? 404 : 500);
@@ -140,10 +140,48 @@ export class PortraitController {
 
       const data = await PortraitService.updateUserProfile(userId, profileData);
 
-      sendResult(res, { data }, '更新成功', 200);
+      sendResult(res, data, '更新成功', 200);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       sendError(res, message, 400);
+    }
+  }
+
+  /**
+   * 从 checkin 数据刷新健康画像
+   * POST /api/health/refresh-from-checkin
+   * 逻辑：如果已有数据则返回，无数据才调用 AI
+   */
+  static async refreshPortraitFromCheckin(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = getUserIdFromReq(req);
+      console.log('[PortraitController.refreshPortraitFromCheckin] 从 checkin 刷新画像，用户:', userId);
+
+      const data = await PortraitService.refreshPortraitFromCheckin(userId);
+
+      sendResult(res, data, '健康画像已返回', 200);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      sendError(res, message, error instanceof Error && message.includes('未完成健康档案设置') ? 400 : 500);
+    }
+  }
+
+  /**
+   * 强制刷新健康画像数据
+   * POST /api/health/force-refresh
+   * 忽略现有数据，强制调用 AI 重新分析
+   */
+  static async forceRefreshPortrait(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = getUserIdFromReq(req);
+      console.log('[PortraitController.forceRefreshPortrait] 强制刷新画像，用户:', userId);
+
+      const data = await PortraitService.forceRefreshPortrait(userId);
+
+      sendResult(res, data, '健康画像已强制更新', 200);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      sendError(res, message, error instanceof Error && message.includes('未完成健康档案设置') ? 400 : 500);
     }
   }
 }
