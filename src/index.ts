@@ -22,17 +22,33 @@ import todolistRouters from './routes/todoListRouters.js';
 
 import { getCurrentTimeString } from './util/dateTime.js';
 
-const allowOrigins = [
+const fixedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'https://cdw.zbyblq.xin',
     'https://localhost'
 ];
+// 匹配规则：以 https:// 开头，以 .cdesign-web.pages.dev 结尾
+const cfPattern = /^https:\/\/.*\.cdesign-web\.pages\.dev$/;
+
 const app = express();
 const PORT = Number(env.port || 8080);
 app.set('trust proxy', 1);
 app.use(cors({
-    origin: allowOrigins,
+    origin: (origin, callback) => {
+        // 如果是同源请求（没有 origin）或者是固定列表里的域名
+        if (!origin || fixedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // 校验是否符合 Cloudflare Pages 的子域名规则
+        if (cfPattern.test(origin)) {
+            return callback(null, true);
+        }
+
+        // 都不符合则拒绝
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
 app.use(express.json());
@@ -54,6 +70,7 @@ app.use('/api/sleep-checkin', sleepCheckinRouters);
 app.use('/api/exercise-checkin', exerciseCheckinRouters);
 app.use('/api/history', historyRouters);
 app.use('/api/tasks', todolistRouters);
+// app.use('/api/agg',(req,res) =>{next();});
 
 app.get('/', (_, res) => { res.send('why are you here?'); });
 
