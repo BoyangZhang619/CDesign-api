@@ -58,6 +58,7 @@ export interface Task {
   title: string;
   description?: string;
   type: TaskType;
+  category?: 'diet' | 'exercise' | 'sleep' | 'custom'; // 新增：任务类别
   status: TaskStatus;
   priority: TaskPriority;
   due_date: string; // YYYY-MM-DD
@@ -69,6 +70,8 @@ export interface Task {
   checkin_type?: CheckinType;
   checkin_recurrence?: CheckinRecurrence;
   checkin_preset?: string;
+  preset_type?: string; // 新增：预设类型
+  date_type?: CheckinRecurrence; // 新增：日期类型
   ai_prompt?: string;
   created_at: string; // ISO 8601
   updated_at: string; // ISO 8601
@@ -83,6 +86,8 @@ export interface TaskCompletionRecord {
   task_id?: number;
   task_title: string;
   task_type: TaskType;
+  category?: 'diet' | 'exercise' | 'sleep' | 'custom'; // 新增：任务类别
+  preset_type?: string; // 新增：预设类型
   task_priority: TaskPriority;
   completion_date: string; // YYYY-MM-DD
   completion_time: string; // ISO 8601
@@ -121,6 +126,18 @@ export interface TaskStatistics {
     custom: number;
     ai_suggested: number;
   };
+  byCategory?: {
+    diet: number;
+    exercise: number;
+    sleep: number;
+    custom: number;
+  };
+  byCategoryCompleted?: {
+    diet_completed: number;
+    exercise_completed: number;
+    sleep_completed: number;
+    preset_completed: number;
+  };
   byPriority: {
     high: number;
     medium: number;
@@ -149,6 +166,7 @@ export interface CreateTaskRequest {
   title: string;
   description?: string;
   type: TaskType;
+  category?: 'diet' | 'exercise' | 'sleep' | 'custom'; // 新增：任务类别
   priority: TaskPriority;
   due_date: string;
   due_time?: string;
@@ -157,6 +175,8 @@ export interface CreateTaskRequest {
   checkin_type?: CheckinType;
   checkin_recurrence?: CheckinRecurrence;
   checkin_preset?: string;
+  preset_type?: string; // 新增：预设类型
+  date_type?: CheckinRecurrence; // 新增：日期类型
   ai_prompt?: string;
 }
 

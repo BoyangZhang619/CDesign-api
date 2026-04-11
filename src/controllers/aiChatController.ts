@@ -348,6 +348,7 @@ export class AIChatController {
 
       // 发送初始连接事件
       res.write('data: {"type":"connected"}\n\n');
+      console.log('[sendMessageStream] 已发送 connected 事件');
 
       // 流式处理消息
       try {
@@ -357,11 +358,13 @@ export class AIChatController {
           content,
           (chunk: string) => {
             // 每接收到数据块就发送给客户端
+            console.log('[sendMessageStream] 发送 chunk 事件，内容长度:', chunk.length);
             res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
           }
         );
 
         // 发送完成事件
+        console.log('[sendMessageStream] 发送 done 事件');
         res.write(`data: ${JSON.stringify({
           type: 'done',
           userMessageId: result.userMessageId,
@@ -371,6 +374,7 @@ export class AIChatController {
 
         res.end();
       } catch (streamError) {
+        console.error('[sendMessageStream] 流式错误:', streamError);
         res.write(`data: ${JSON.stringify({
           type: 'error',
           message: streamError instanceof Error ? streamError.message : String(streamError)

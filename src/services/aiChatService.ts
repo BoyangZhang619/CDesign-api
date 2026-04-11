@@ -577,16 +577,21 @@ export class AIChatService {
 
             try {
               const json = JSON.parse(data);
+              console.log('[callDashScopeStream] 收到 DashScope 响应:', JSON.stringify(json).substring(0, 100));
               
               // 最后一块会包含完整的 text 字段
               if (json.output?.text) {
                 chunkCount++;
+                console.log('[callDashScopeStream] 调用 onChunk，内容长度:', json.output.text.length);
                 onChunk(json.output.text);
                 onContent(json.output.text);
+              } else {
+                console.log('[callDashScopeStream] 没有 text 字段在响应中');
               }
 
               // 处理返回的 session_id（用于多轮对话记忆）
               if (json.output?.session_id && onSessionId) {
+                console.log('[callDashScopeStream] 保存 session_id:', json.output.session_id);
                 onSessionId(json.output.session_id);
               }
 
@@ -614,16 +619,19 @@ export class AIChatService {
         const data = buffer.slice(5).trim();
         if (data) {
           try {
+            console.log('[callDashScopeStream] 处理缓冲区剩余数据');
             const json = JSON.parse(data);
             
             if (json.output?.text) {
               chunkCount++;
+              console.log('[callDashScopeStream] 从缓冲区调用 onChunk，内容长度:', json.output.text.length);
               onChunk(json.output.text);
               onContent(json.output.text);
             }
 
             // 处理返回的 session_id
             if (json.output?.session_id && onSessionId) {
+              console.log('[callDashScopeStream] 从缓冲区保存 session_id:', json.output.session_id);
               onSessionId(json.output.session_id);
             }
 
@@ -637,11 +645,12 @@ export class AIChatService {
               }
             }
           } catch (e) {
-            // 忽略缓冲区解析错误
+            console.error('[callDashScopeStream] 缓冲区解析错误:', e);
           }
         }
       }
 
+      console.log('[callDashScopeStream] 流式完成，chunkCount:', chunkCount, 'totalTokens:', totalTokens);
       onTokens(totalTokens);
     } catch (error) {
       throw error;
