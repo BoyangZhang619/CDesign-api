@@ -24,7 +24,7 @@ function getRefreshCookieOptions(): Object {
 // 检测用户是否存在在user_account表中
 async function userExists(email: string): Promise<boolean> {
     try {
-        const [rows] = await pool.execute('SELECT id FROM user_account WHERE email = ?', [email]);
+        const [rows] = await pool.query('SELECT id FROM user_account WHERE email = ?', [email]);
         return (rows as any[]).length > 0;
     } catch (error) {
         console.error('检测用户是否存在时出错:', error);
@@ -35,7 +35,7 @@ async function userExists(email: string): Promise<boolean> {
 // 检测用户是否正常（存在且status=1）
 async function userAccountNormal(email: string): Promise<boolean> {
     try {
-        const [rows] = await pool.execute('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
+        const [rows] = await pool.query('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
         return (rows as any[]).length > 0;
     } catch (error) {
         console.error('检测用户是否正常时出错:', error);
@@ -73,8 +73,8 @@ async function register(req: Request, res: Response): Promise<Response> {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
-        // await pool.execute('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await pool.execute('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
+        // await pool.query('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
+        await pool.query('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
         return sendResult(res, '注册成功');
     } catch (error) {
         return sendError(res, error.message + " 注册失败", 500);
@@ -89,7 +89,7 @@ async function login(req: Request, res: Response): Promise<Response> {
         if (!email || !password) {
             return sendError(res, '邮箱和密码不能为空', 400);
         }
-        const [rows] = await pool.execute('SELECT id, email, password_hash FROM user_account WHERE email = ?', [email]);
+        const [rows] = await pool.query('SELECT id, email, password_hash FROM user_account WHERE email = ?', [email]);
         if ((rows as any[]).length === 0) {
             return sendError(res, '账号未注册', 400);
         }
@@ -106,7 +106,7 @@ async function login(req: Request, res: Response): Promise<Response> {
         const refreshToken = await signRefreshToken(user);
         const refreshTokenHash = sha256(refreshToken);
 
-        await pool.execute(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
+        await pool.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
                 user.id,
                 refreshTokenHash,
@@ -149,7 +149,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
 
         const refreshTokenHash = sha256(refreshToken);
 
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             `SELECT id, user_id, revoked_at, expires_at FROM refresh_tokens WHERE token_hash = ? LIMIT 1`,
             [refreshTokenHash]
         );
@@ -164,7 +164,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
             return sendError(res, 'refresh token 已失效', 401);
         }
 
-        const [userRows] = await pool.execute(
+        const [userRows] = await pool.query(
             'SELECT id, email, credits FROM user_account WHERE id = ? LIMIT 1',
             [payload.userId]
         );
@@ -182,7 +182,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
          * 3. 存新 token
          * 4. 返回新 access token
          */
-        await pool.execute(
+        await pool.query(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?',
             [tokenRecord.id]
         );
@@ -191,7 +191,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
         const newRefreshToken = signRefreshToken(user);
         const newRefreshTokenHash = sha256(newRefreshToken);
 
-        await pool.execute(
+        await pool.query(
             `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
@@ -223,7 +223,7 @@ async function me(req: Request, res: Response): Promise<Response> {
     const userId = req.user?.userId ?? null;
     console.log('me userId:', userId);
     try {
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM user_account WHERE id = ? LIMIT 1',
             [userId]
         );
@@ -248,7 +248,7 @@ async function logout(req: Request, res: Response): Promise<Response> {
 
         if (refreshToken) {
             const refreshTokenHash = sha256(refreshToken);
-            await pool.execute(
+            await pool.query(
                 'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?',
                 [refreshTokenHash]
             );
@@ -273,7 +273,7 @@ async function logout(req: Request, res: Response): Promise<Response> {
 // 退出所有设备（作废当前用户的所有 refresh token）
 async function logoutAll(req: Request, res: Response): Promise<Response> {
     try {
-        await pool.execute(
+        await pool.query(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',
             [req.user.userId]
         );
@@ -297,7 +297,7 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
 // 更新用户最后登录时间（每次登录成功后调用）
 async function updateLastLoginTime(userId: number): Promise<void> {
     try {
-        await pool.execute(
+        await pool.query(
             'UPDATE user_account SET last_login_time = NOW() WHERE id = ?',
             [userId]
         );
@@ -312,7 +312,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         email = null, nickname = null, avatar_url = null, phone = null, role = null } = req.body;
     const userId = req.user.userId ?? null;
     try {
-        const [userRows] = await pool.execute(
+        const [userRows] = await pool.query(
             'SELECT id FROM user_account WHERE id = ? LIMIT 1',
             [userId]
         );
@@ -322,7 +322,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         }
 
         // 更新用户信息
-        await pool.execute(
+        await pool.query(
             'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ? WHERE id = ?',
             [
                 nickname,
@@ -350,7 +350,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
 async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {
     const { email = null, password = null, switch_type = null, switch_value = null } = req.body;
     const userId = req.user.userId ?? null;
-    const [userRows] = await pool.execute(
+    const [userRows] = await pool.query(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -359,13 +359,13 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
         return sendError(res, '用户不存在', 404);
     }
 
-    const [rows] = await pool.execute('SELECT count(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = "user_account" AND column_name = ?', [switch_type]);
+    const [rows] = await pool.query('SELECT count(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = "user_account" AND column_name = ?', [switch_type]);
 
     if ((rows as any[])[0].count === 0) {
         return sendError(res, '无效的切换类型', 400);
     }
 
-    await pool.execute(`UPDATE user_account SET ${switch_type} = ? WHERE id = ?`, [switch_value, userId]);
+    await pool.query(`UPDATE user_account SET ${switch_type} = ? WHERE id = ?`, [switch_value, userId]);
     await updateLastLoginTime(userId);
 
     return sendResult(res, {
@@ -388,7 +388,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
-    const [userRows] = await pool.execute(
+    const [userRows] = await pool.query(
         'SELECT id, password FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -407,7 +407,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
 
     // 更新密码
     const hashedNewPassword = await bcrypt.hash(new_password, 10);
-    await pool.execute(
+    await pool.query(
         'UPDATE user_account SET password = ? WHERE id = ?',
         [hashedNewPassword, userId]
     );
@@ -428,7 +428,7 @@ async function SwitchEmail(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
-    const [userRows] = await pool.execute(
+    const [userRows] = await pool.query(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -438,7 +438,7 @@ async function SwitchEmail(req: Request, res: Response): Promise<Response> {
     }
 
     // 更新邮箱
-    await pool.execute(
+    await pool.query(
         'UPDATE user_account SET email = ? WHERE id = ?',
         [new_email, userId]
     );

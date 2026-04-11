@@ -89,7 +89,7 @@ async function insertExerciseRecord(req: Request, res: Response): Promise<Respon
         const durationMin = calculateExerciseDuration(start_time, end_time);
 
         // 先插入记录到数据库，AI生成字段先为空
-        const [result] = await pool.execute(
+        const [result] = await pool.query(
             'INSERT INTO checkin_exercise_record (user_id, daily_checkin_id, activity_type, start_time, end_time, duration_min, intensity, note, ai_recognition_flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 userId ?? null,
@@ -162,7 +162,7 @@ async function generateExerciseAnalysisAsync(
 
         // 更新数据库中的AI生成字段
         if (analysisData) {
-            await pool.execute(
+            await pool.query(
                 'UPDATE checkin_exercise_record SET calories_burned = ?, suggestion = ?, evaluation = ? WHERE id = ? AND user_id = ?',
                 [
                     analysisData.caloriesBurned,
@@ -225,7 +225,7 @@ async function getExerciseRecords(req: Request, res: Response): Promise<Response
 
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_exercise_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()) ORDER BY start_time DESC',
             [userId, userId]
         );
@@ -261,7 +261,7 @@ async function updateExerciseRecord(req: Request, res: Response): Promise<Respon
         // 如果修改了运动时间，需要重新计算时长并触发AI重新分析
         if (start_time || end_time) {
             // 获取原记录
-            const [originalRecords] = await pool.execute(
+            const [originalRecords] = await pool.query(
                 'SELECT start_time, end_time, activity_type, intensity, note FROM checkin_exercise_record WHERE id = ? AND user_id = ?',
                 [exerciseRecordId, userId]
             );
@@ -286,7 +286,7 @@ async function updateExerciseRecord(req: Request, res: Response): Promise<Respon
             const newDurationMin = calculateExerciseDuration(newStartTime, newEndTime);
 
             // 更新记录，并清空AI生成的字段以便重新计算
-            await pool.execute(
+            await pool.query(
                 'UPDATE checkin_exercise_record SET activity_type = ?, start_time = ?, end_time = ?, duration_min = ?, intensity = ?, note = ?, calories_burned = NULL, suggestion = NULL, evaluation = NULL WHERE id = ? AND user_id = ?',
                 [
                     newActivityType,
@@ -304,7 +304,7 @@ async function updateExerciseRecord(req: Request, res: Response): Promise<Respon
             generateExerciseAnalysisAsync(userId, parseInt(exerciseRecordId), newActivityType, newDurationMin, newIntensity, newNote);
         } else {
             // 只更新其他字段
-            await pool.execute(
+            await pool.query(
                 'UPDATE checkin_exercise_record SET activity_type = ?, intensity = ?, note = ? WHERE id = ? AND user_id = ?',
                 [
                     activity_type ?? null,
@@ -333,7 +333,7 @@ async function deleteExerciseRecord(req: Request, res: Response): Promise<Respon
             : req.params.exerciseRecordId;
         const userId = getUserIdFromReq(req);
 
-        const result = await pool.execute(
+        const result = await pool.query(
             'DELETE FROM checkin_exercise_record WHERE id = ? AND user_id = ?',
             [exerciseRecordId, userId]
         );
@@ -356,7 +356,7 @@ async function getExerciseStatistics(req: Request, res: Response): Promise<Respo
         const userId = getUserIdFromReq(req);
         const { days = 7 } = req.query;
 
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             `SELECT 
                 COUNT(*) as record_count,
                 SUM(duration_min) as total_duration_min,
@@ -393,7 +393,7 @@ async function getExerciseStatisticsByType(req: Request, res: Response): Promise
         const userId = getUserIdFromReq(req);
         const { days = 7 } = req.query;
 
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             `SELECT 
                 activity_type,
                 COUNT(*) as count,
@@ -425,7 +425,7 @@ async function getExerciseStatisticsByType(req: Request, res: Response): Promise
 async function getSummaryResult(req: Request, res: Response): Promise<object> {
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_exercise_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId, userId]
         );
@@ -456,7 +456,7 @@ async function getSummary(req: Request, res: Response): Promise<Response> {
 async function getAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId]
         );
@@ -486,24 +486,24 @@ async function calculateAISummary(summaryData: object,userId: number) {
         });
 
         if (aiResult.ok) {
-            const dailyCheckinId = (await pool.execute(
+            const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
             ))[0][0]?.id;
 
             if (dailyCheckinId) {
-                const [existingRows] = await pool.execute(
+                const [existingRows] = await pool.query(
                     'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
                     [dailyCheckinId]
                 );
 
                 if ((existingRows as any[]).length > 0) {
-                    await pool.execute(
+                    await pool.query(
                         'UPDATE checkin_ai_summary SET exercise_ai_summary = ? WHERE daily_checkin_id = ?',
                         [aiResult.content, dailyCheckinId]
                     );
                 } else {
-                    await pool.execute(
+                    await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, exercise_ai_summary) VALUES (?, ?)',
                         [dailyCheckinId, aiResult.content]
                     );

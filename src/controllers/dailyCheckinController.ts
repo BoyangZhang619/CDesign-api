@@ -22,7 +22,7 @@ function getBasicInfo(req: Request): any[] {
 async function detectDailyCheckin(req: Request, res: Response, sendResponse: boolean = true): Promise<Boolean | Response> {
     const [userId, today] = getBasicInfo(req).map(info => info.value);
     try {
-        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        const [rows] = await pool.query('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         if ((rows as any[]).length > 0) {
             return sendResponse ? sendResult(res, { checkedIn: true }) : true;
         } else {
@@ -39,7 +39,7 @@ async function getDailyCheckin(req: Request, res: Response): Promise<Response> {
     const [userId, today] = getBasicInfo(req).map(info => info.value);
 
     try {
-        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        const [rows] = await pool.query('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         if ((rows as any[]).length > 0) {
             return sendResult(res, { checkinData: rows[0] });
         } else {
@@ -55,7 +55,7 @@ async function getDailyCheckin(req: Request, res: Response): Promise<Response> {
 async function deleteDailyCheckin(req: Request, res: Response): Promise<Response> {
     const [userId, today] = getBasicInfo(req).values();
     try {
-        await pool.execute('DELETE FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        await pool.query('DELETE FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         return sendResult(res, { success: true });
     } catch (error) {
         console.error('Error deleting daily check-in:', error);
@@ -88,7 +88,7 @@ async function insertDailyCheckin(req: Request, res: Response): Promise<Response
         return sendError(res, 'Already checked in today');
     }
     try {
-        await pool.execute('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+        await pool.query('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
             userId ?? null,
             today ?? null,
             breakfast ?? null,
@@ -134,10 +134,10 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
     } = body;
 
     try {
-        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        const [rows] = await pool.query('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         if ((rows as any[]).length > 0) {
             // 如果记录已存在，则更新
-            await pool.execute('UPDATE daily_checkin SET breakfast = ?, lunch = ?, dinner = ?, midnight_snack = ?, water_intake_ml = ?, exercise_duration_min = ?, sleep_start_time = ?, sleep_duration_hours = ?, body_weight_kg = ?, energy_level = ?, note = ?, completion_rate = ?, mood = ?, sleep_quality = ? WHERE user_id = ? AND checkin_date = ?', [
+            await pool.query('UPDATE daily_checkin SET breakfast = ?, lunch = ?, dinner = ?, midnight_snack = ?, water_intake_ml = ?, exercise_duration_min = ?, sleep_start_time = ?, sleep_duration_hours = ?, body_weight_kg = ?, energy_level = ?, note = ?, completion_rate = ?, mood = ?, sleep_quality = ? WHERE user_id = ? AND checkin_date = ?', [
                 breakfast ?? null,
                 lunch ?? null,
                 dinner ?? null,
@@ -157,7 +157,7 @@ async function updateDailyCheckin(req: Request, res: Response): Promise<Response
             ]);
         } else {
             // 如果记录不存在，则插入
-            await pool.execute('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+            await pool.query('INSERT INTO daily_checkin (user_id, checkin_date, breakfast, lunch, dinner, midnight_snack, water_intake_ml, exercise_duration_min, sleep_start_time, sleep_duration_hours, body_weight_kg, energy_level, note, completion_rate, mood, sleep_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
                 userId ?? null,
                 today ?? null,
                 breakfast ?? null,
@@ -189,13 +189,13 @@ async function insertEmptyDailyCheckin(req: Request, res: Response): Promise<any
     const [userId, today] = getBasicInfo(req).map(info => info.value);
     const hasCheckedIn = await detectDailyCheckin(req, res, false);
     if (hasCheckedIn) {
-        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        const [rows] = await pool.query('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         console.log('Found existing daily check-in:', rows);
         return rows[0];
     }
     try {
-        await pool.execute('INSERT IGNORE INTO daily_checkin (user_id, checkin_date) VALUES (?, ?)', [userId, today]);
-        const [rows] = await pool.execute('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
+        await pool.query('INSERT IGNORE INTO daily_checkin (user_id, checkin_date) VALUES (?, ?)', [userId, today]);
+        const [rows] = await pool.query('SELECT * FROM daily_checkin WHERE user_id = ? AND checkin_date = ?', [userId, today]);
         console.log('Inserted empty daily check-in, retrieved record:', rows);
         return rows[0];
     } catch (error) {
@@ -216,7 +216,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
             sleep: sleepData,
             exercise: exerciseData
         };
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId]
         );
@@ -248,24 +248,24 @@ async function calculateAISummary(summaryData: object, userId: number) {
         });
 
         if (aiResult.ok) {
-            const dailyCheckinId = (await pool.execute(
+            const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
             ))[0][0]?.id;
 
             if (dailyCheckinId) {
-                const [existingRows] = await pool.execute(
+                const [existingRows] = await pool.query(
                     'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
                     [dailyCheckinId]
                 );
 
                 if ((existingRows as any[]).length > 0) {
-                    await pool.execute(
+                    await pool.query(
                         'UPDATE checkin_ai_summary SET total_ai_summary = ? WHERE daily_checkin_id = ?',
                         [aiResult.content, dailyCheckinId]
                     );
                 } else {
-                    await pool.execute(
+                    await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, total_ai_summary) VALUES (?, ?)',
                         [dailyCheckinId, aiResult.content]
                     );

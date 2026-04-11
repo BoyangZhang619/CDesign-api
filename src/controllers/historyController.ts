@@ -233,7 +233,7 @@ async function getRecordsByType(
         query += ' ORDER BY sleep_start_time DESC';
     }
 
-    const [rows] = await pool.execute(query, params);
+    const [rows] = await pool.query(query, params);
     return rows as any[];
 }
 
@@ -283,7 +283,7 @@ async function getRecordsCountByType(
         params.push(endDate);
     }
 
-    const [rows] = await pool.execute(query, params);
+    const [rows] = await pool.query(query, params);
     const result = (rows as any[])[0];
     return result?.count || 0;
 }

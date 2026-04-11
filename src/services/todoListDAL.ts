@@ -49,7 +49,7 @@ export class TodoListDAL {
             taskData.ai_prompt || null
         ];
 
-        const [result] = await pool.execute(query, values) as any;
+        const [result] = await pool.query(query, values) as any;
         return this.getTaskById(userId, result.insertId) as Promise<Task>;
     }
 
@@ -59,7 +59,7 @@ export class TodoListDAL {
     static async getTaskById(userId: number, taskId: number): Promise<Task | null> {
         console.log('Fetching task with ID:', taskId, 'for user ID:', userId);
         const query = 'SELECT * FROM tasks WHERE id = ? AND user_id = ?';
-        const [rows] = await pool.execute(query, [taskId, userId]) as any;
+        const [rows] = await pool.query(query, [taskId, userId]) as any;
         return rows[0] || null;
     }
 
@@ -100,7 +100,7 @@ export class TodoListDAL {
         }
         // 获取总数
         const countQuery = `SELECT COUNT(*) as total FROM tasks ${whereClause}`;
-        const [countResult] = await pool.execute(countQuery, queryParams) as any;
+        const [countResult] = await pool.query(countQuery, queryParams) as any;
         const total = countResult[0].total;
         // 获取任务列表
         const dataQuery = `SELECT * FROM tasks ${whereClause} ORDER BY priority = 'high' DESC, priority = 'medium' DESC, due_date ASC, created_at DESC LIMIT ?, ?`;
@@ -170,7 +170,7 @@ export class TodoListDAL {
         const query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`;
         values.push(taskId, userId);
 
-        await pool.execute(query, values);
+        await pool.query(query, values);
         return this.getTaskById(userId, taskId);
     }
 
@@ -179,7 +179,7 @@ export class TodoListDAL {
      */
     static async deleteTask(userId: number, taskId: number): Promise<boolean> {
         const query = 'DELETE FROM tasks WHERE id = ? AND user_id = ?';
-        const [result] = await pool.execute(query, [taskId, userId]) as any;
+        const [result] = await pool.query(query, [taskId, userId]) as any;
         return result.affectedRows > 0;
     }
 
@@ -206,7 +206,7 @@ export class TodoListDAL {
         SET status = 'completed', completed_date = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND user_id = ?
       `;
-            await connection.execute(updateQuery, [actualDate, taskId, userId]);
+            await connection.query(updateQuery, [actualDate, taskId, userId]);
 
             // 记录完成记录
             const completionStatus = this.calculateCompletionStatus(task.due_date, actualDate);
@@ -216,7 +216,7 @@ export class TodoListDAL {
           completion_date, completion_time, due_date, category_icon, completion_status
         ) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)
       `;
-            await connection.execute(recordQuery, [
+            await connection.query(recordQuery, [
                 userId,
                 taskId,
                 task.title,
@@ -247,7 +247,7 @@ export class TodoListDAL {
       SET status = 'pending', completed_date = NULL, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND user_id = ?
     `;
-        const [result] = await pool.execute(query, [taskId, userId]) as any;
+        const [result] = await pool.query(query, [taskId, userId]) as any;
         return result.affectedRows > 0;
     }
 
@@ -321,7 +321,7 @@ export class TodoListDAL {
       SELECT * FROM checkin_records 
       WHERE user_id = ? AND checkin_type = ? AND checkin_date = ?
     `;
-        const [rows] = await pool.execute(getQuery, [userId, checkinType, checkinDate]) as any;
+        const [rows] = await pool.query(getQuery, [userId, checkinType, checkinDate]) as any;
 
         if (rows.length > 0) {
             return rows[0];
@@ -332,7 +332,7 @@ export class TodoListDAL {
       INSERT INTO checkin_records (user_id, checkin_type, checkin_date, completed)
       VALUES (?, ?, ?, FALSE)
     `;
-        const [result] = await pool.execute(createQuery, [userId, checkinType, checkinDate]) as any;
+        const [result] = await pool.query(createQuery, [userId, checkinType, checkinDate]) as any;
 
         return {
             id: result.insertId,
@@ -354,7 +354,7 @@ export class TodoListDAL {
       SET completed = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
-        const [result] = await pool.execute(query, [completed, recordId]) as any;
+        const [result] = await pool.query(query, [completed, recordId]) as any;
         return result.affectedRows > 0;
     }
 
@@ -367,7 +367,7 @@ export class TodoListDAL {
       SET status = 'overdue', updated_at = CURRENT_TIMESTAMP
       WHERE status = 'pending' AND due_date < CURDATE()
     `;
-        const [result] = await pool.execute(query) as any;
+        const [result] = await pool.query(query) as any;
         return result.affectedRows;
     }
 
@@ -403,7 +403,7 @@ export class TodoListDAL {
       ORDER BY completion_date DESC, completion_time DESC
     `;
 
-        const [rows] = await pool.execute(query, queryParams) as any;
+        const [rows] = await pool.query(query, queryParams) as any;
         return rows;
     }
 
@@ -437,7 +437,7 @@ export class TodoListDAL {
 
         query += ' ORDER BY due_date DESC';
 
-        const [rows] = await pool.execute(query, queryParams) as any;
+        const [rows] = await pool.query(query, queryParams) as any;
         return rows;
     }
 
@@ -456,7 +456,7 @@ export class TodoListDAL {
       ORDER BY due_date DESC LIMIT 1
     `;
 
-        const [rows] = await pool.execute(query, [userId, checkinType, date, date]) as any;
+        const [rows] = await pool.query(query, [userId, checkinType, date, date]) as any;
         return rows[0] || null;
     }
 }

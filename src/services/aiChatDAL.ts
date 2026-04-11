@@ -39,7 +39,7 @@ export class AIChatDAL {
       sessionData.max_tokens ?? 2048
     ];
 
-    const [result] = await pool.execute(query, values) as any;
+    const [result] = await pool.query(query, values) as any;
     return this.getSessionById(userId, result.insertId) as Promise<AIChatSession>;
   }
 
@@ -48,7 +48,7 @@ export class AIChatDAL {
    */
   static async getSessionById(userId: number, sessionId: number): Promise<AIChatSession | null> {
     const query = 'SELECT * FROM ai_chat_sessions WHERE id = ? AND user_id = ?';
-    const [rows] = await pool.execute(query, [sessionId, userId]) as any;
+    const [rows] = await pool.query(query, [sessionId, userId]) as any;
     return rows[0] || null;
   }
 
@@ -57,7 +57,7 @@ export class AIChatDAL {
    */
   static async getSessionByUuid(userId: number, uuid: string): Promise<AIChatSession | null> {
     const query = 'SELECT * FROM ai_chat_sessions WHERE uuid = ? AND user_id = ?';
-    const [rows] = await pool.execute(query, [uuid, userId]) as any;
+    const [rows] = await pool.query(query, [uuid, userId]) as any;
     return rows[0] || null;
   }
 
@@ -68,50 +68,74 @@ export class AIChatDAL {
     const { page = 1, limit = 20, search, ai_model, is_starred, start_date, end_date } = params;
     const offset = (page - 1) * limit;
 
-    let whereClause = 'WHERE user_id = ? AND is_active = TRUE';
-    const queryParams: any[] = [userId];
+    console.log('[getUserSessions] 参数:', { userId, page, limit, search, ai_model, is_starred, start_date, end_date });
 
-    if (search) {
-      whereClause += ' AND (session_name LIKE ? OR description LIKE ?)';
-      const searchPattern = `%${search}%`;
-      queryParams.push(searchPattern, searchPattern);
+    // 构建 WHERE 子句和参数的函数
+    const buildWhereParams = () => {
+      const queryParams: any[] = [userId];
+      let where = 'WHERE user_id = ? AND is_active = TRUE';
+
+      if (search) {
+        where += ' AND (session_name LIKE ? OR description LIKE ?)';
+        const pattern = `%${search}%`;
+        queryParams.push(pattern, pattern);
+      }
+
+      if (ai_model) {
+        where += ' AND ai_model = ?';
+        queryParams.push(ai_model);
+      }
+
+      if (is_starred !== undefined) {
+        where += ' AND is_starred = ?';
+        // 确保转换为整数
+        queryParams.push(is_starred ? 1 : 0);
+      }
+
+      if (start_date) {
+        where += ' AND created_at >= ?';
+        queryParams.push(start_date);
+      }
+
+      if (end_date) {
+        where += ' AND created_at <= ?';
+        queryParams.push(end_date);
+      }
+
+      return { where, queryParams };
+    };
+
+    try {
+      const { where, queryParams: countParams } = buildWhereParams();
+
+      console.log('[getUserSessions] COUNT 查询:', { sql: `SELECT COUNT(*) as total FROM ai_chat_sessions ${where}`, params: countParams });
+
+      // 获取总数 - 使用 query 替代 query
+      const [countResult] = await pool.query(`SELECT COUNT(*) as total FROM ai_chat_sessions ${where}`, countParams) as any;
+      const total = countResult[0]?.total || 0;
+
+      console.log('[getUserSessions] 总数:', total);
+
+      // 获取会话列表
+      const { where: whereClause, queryParams: dataParams } = buildWhereParams();
+      dataParams.push(limit, offset);
+
+      console.log('[getUserSessions] SELECT 查询:', { sql: `SELECT * FROM ai_chat_sessions ${whereClause} ORDER BY last_message_at DESC, created_at DESC LIMIT ? OFFSET ?`, params: dataParams });
+
+      const dataQuery = `
+        SELECT * FROM ai_chat_sessions ${whereClause}
+        ORDER BY last_message_at DESC, created_at DESC
+        LIMIT ? OFFSET ?
+      `;
+      const [rows] = await pool.query(dataQuery, dataParams) as any;
+
+      console.log('[getUserSessions] 返回结果:', { count: rows.length, total });
+
+      return { sessions: rows, total };
+    } catch (error) {
+      console.error('[getUserSessions] 错误:', error);
+      throw error;
     }
-
-    if (ai_model) {
-      whereClause += ' AND ai_model = ?';
-      queryParams.push(ai_model);
-    }
-
-    if (is_starred !== undefined) {
-      whereClause += ' AND is_starred = ?';
-      queryParams.push(is_starred);
-    }
-
-    if (start_date) {
-      whereClause += ' AND created_at >= ?';
-      queryParams.push(start_date);
-    }
-
-    if (end_date) {
-      whereClause += ' AND created_at <= ?';
-      queryParams.push(end_date);
-    }
-
-    // 获取总数
-    const countQuery = `SELECT COUNT(*) as total FROM ai_chat_sessions ${whereClause}`;
-    const [countResult] = await pool.execute(countQuery, queryParams) as any;
-    const total = countResult[0].total;
-
-    // 获取会话列表
-    queryParams.push(limit, offset);
-    const dataQuery = `
-      SELECT * FROM ai_chat_sessions ${whereClause}
-      ORDER BY last_message_at DESC, created_at DESC
-      LIMIT ? OFFSET ?
-    `;
-    const [rows] = await pool.execute(dataQuery, queryParams) as any;
-
-    return { sessions: rows, total };
   }
 
   /**
@@ -158,7 +182,7 @@ export class AIChatDAL {
     const query = `UPDATE ai_chat_sessions SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`;
     values.push(sessionId, userId);
 
-    await pool.execute(query, values);
+    await pool.query(query, values);
     return this.getSessionById(userId, sessionId);
   }
 
@@ -167,7 +191,7 @@ export class AIChatDAL {
    */
   static async deleteSession(userId: number, sessionId: number): Promise<boolean> {
     const query = 'UPDATE ai_chat_sessions SET is_active = FALSE WHERE id = ? AND user_id = ?';
-    const [result] = await pool.execute(query, [sessionId, userId]) as any;
+    const [result] = await pool.query(query, [sessionId, userId]) as any;
     return result.affectedRows > 0;
   }
 
@@ -184,7 +208,7 @@ export class AIChatDAL {
     try {
       // 获取会话中的消息计数
       const countQuery = 'SELECT COUNT(*) as count FROM ai_chat_messages WHERE session_id = ?';
-      const [countResult] = await pool.execute(countQuery, [sessionId]) as any;
+      const [countResult] = await pool.query(countQuery, [sessionId]) as any;
       const messageIndex = (countResult[0].count || 0) + 1;
 
       const query = `
@@ -215,7 +239,7 @@ export class AIChatDAL {
 
       console.log('[addMessage] sessionId:', sessionId, 'role:', role, 'values:', values);
 
-      const [result] = await pool.execute(query, values) as any;
+      const [result] = await pool.query(query, values) as any;
 
       // 更新会话的消息计数和最后消息时间
       await this.updateSessionStats(sessionId, messageData);
@@ -232,7 +256,7 @@ export class AIChatDAL {
    */
   static async getMessageById(messageId: number): Promise<AIChatMessage | null> {
     const query = 'SELECT * FROM ai_chat_messages WHERE id = ? AND is_deleted = FALSE';
-    const [rows] = await pool.execute(query, [messageId]) as any;
+    const [rows] = await pool.query(query, [messageId]) as any;
     return rows[0] || null;
   }
 
@@ -250,7 +274,7 @@ export class AIChatDAL {
       ORDER BY message_index ASC
       LIMIT ? OFFSET ?
     `;
-    const [rows] = await pool.execute(query, [sessionId, limit, offset]) as any;
+    const [rows] = await pool.query(query, [sessionId, limit, offset]) as any;
     return rows;
   }
 
@@ -263,7 +287,7 @@ export class AIChatDAL {
       WHERE session_id = ? AND is_deleted = FALSE
       ORDER BY message_index ASC
     `;
-    const [rows] = await pool.execute(query, [sessionId]) as any;
+    const [rows] = await pool.query(query, [sessionId]) as any;
     return rows;
   }
 
@@ -276,7 +300,7 @@ export class AIChatDAL {
       SET content = ?, is_edited = TRUE, edited_at = NOW(), edited_content = ?
       WHERE id = ?
     `;
-    const [result] = await pool.execute(query, [newContent, newContent, messageId]) as any;
+    const [result] = await pool.query(query, [newContent, newContent, messageId]) as any;
     return result.affectedRows > 0;
   }
 
@@ -285,7 +309,7 @@ export class AIChatDAL {
    */
   static async deleteMessage(messageId: number): Promise<boolean> {
     const query = 'UPDATE ai_chat_messages SET is_deleted = TRUE WHERE id = ?';
-    const [result] = await pool.execute(query, [messageId]) as any;
+    const [result] = await pool.query(query, [messageId]) as any;
     return result.affectedRows > 0;
   }
 
@@ -308,7 +332,7 @@ export class AIChatDAL {
       WHERE id = ?
     `;
 
-    await pool.execute(query, [inputTokens, outputTokens, totalTokens, sessionId]);
+    await pool.query(query, [inputTokens, outputTokens, totalTokens, sessionId]);
   }
 
   /**
@@ -329,7 +353,7 @@ export class AIChatDAL {
       WHERE user_id = ? AND is_active = TRUE
     `;
 
-    const [rows] = await pool.execute(query, [userId]) as any;
+    const [rows] = await pool.query(query, [userId]) as any;
     const stats = rows[0] || {};
 
     return {
@@ -345,7 +369,7 @@ export class AIChatDAL {
    */
   static async clearSessionMessages(sessionId: number): Promise<boolean> {
     const query = 'UPDATE ai_chat_messages SET is_deleted = TRUE WHERE session_id = ?';
-    const [result] = await pool.execute(query, [sessionId]) as any;
+    const [result] = await pool.query(query, [sessionId]) as any;
 
     // 重置会话计数
     const updateQuery = `
@@ -353,7 +377,7 @@ export class AIChatDAL {
       SET message_count = 0, total_input_tokens = 0, total_output_tokens = 0, total_tokens = 0
       WHERE id = ?
     `;
-    await pool.execute(updateQuery, [sessionId]);
+    await pool.query(updateQuery, [sessionId]);
 
     return result.affectedRows > 0;
   }
@@ -380,7 +404,7 @@ export class AIChatDAL {
 
     query += ' ORDER BY m.created_at DESC LIMIT 100';
 
-    const [rows] = await pool.execute(query, params) as any;
+    const [rows] = await pool.query(query, params) as any;
     return rows;
   }
 }

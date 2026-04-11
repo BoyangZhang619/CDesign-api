@@ -19,7 +19,7 @@ interface UserRow {
 }
 
 async function getUserById(userId: number): Promise<UserRow | null> {
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
         'SELECT id, credits FROM user_account WHERE id = ? LIMIT 1',
         [userId]
     );

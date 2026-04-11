@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 // 检测是否需要输入健康信息
 async function CheckHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
         'SELECT * FROM user_profile WHERE user_id = ? LIMIT 1',
         [userId]
     );
@@ -35,7 +35,7 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
     }
 
     try {
-        await pool.execute(
+        await pool.query(
             `INSERT INTO user_profile (user_id, gender, birthday, height_cm, current_weight_kg, target_weight_kg, dietary_preferences, diet_other_text, health_goals, goal_other_text, allergies, sleep_habit, activity_level)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [userId, gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOtherText, allergies, sleepHabit, activityLevel]
@@ -59,7 +59,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
     }
 
     try {
-        await pool.execute(
+        await pool.query(
             `UPDATE user_profile SET gender = ?, birthday = ?, height_cm = ?, current_weight_kg = ?, target_weight_kg = ?, diet_preferences = ?, diet_other_text = ?, health_goals = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
             [gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOtherText, allergies, sleepHabit, activityLevel, userId]
         );
@@ -74,7 +74,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
 // 获取健康信息
 async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
         'SELECT * FROM user_profile WHERE user_id = ? LIMIT 1',
         [userId]
     );

@@ -36,17 +36,9 @@ const PORT = Number(env.port || 8080);
 app.set('trust proxy', 1);
 app.use(cors({
     origin: (origin, callback) => {
-        // 如果是同源请求（没有 origin）或者是固定列表里的域名
-        if (!origin || fixedOrigins.includes(origin)) {
+        if (!origin || fixedOrigins.includes(origin) || cfPattern.test(origin)) {
             return callback(null, true);
         }
-
-        // 校验是否符合 Cloudflare Pages 的子域名规则
-        if (cfPattern.test(origin)) {
-            return callback(null, true);
-        }
-
-        // 都不符合则拒绝
         callback(new Error('Not allowed by CORS'));
     },
     credentials: true

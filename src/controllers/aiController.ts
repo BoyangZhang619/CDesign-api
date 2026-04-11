@@ -255,7 +255,7 @@ async function commonChatHandler(req: Request, res: Response): Promise<any> {
             return sendError(res, '无有效输出，可能是模型不支持该请求或其他问题 in commonChatHandler', 500);
         }
 
-        await pool.execute(
+        await pool.query(
             'UPDATE user_account SET credits = credits - ? WHERE id = ?',
             [totalUsage, userId]
         );
@@ -290,7 +290,7 @@ async function streamChatHandler(req: Request, res: Response): Promise<any> {
         }
 
         if (result.usage.total_tokens > 0) {
-            await pool.execute(
+            await pool.query(
                 'UPDATE user_account SET credits = credits - ? WHERE id = ?',
                 [result.usage.total_tokens, userId]
             );

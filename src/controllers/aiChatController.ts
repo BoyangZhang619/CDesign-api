@@ -46,6 +46,9 @@ export class AIChatController {
   static async getUserSessions(req: Request, res: Response): Promise<void> {
     try {
       const userId = getUserIdFromReq(req);
+      
+      console.log('[getUserSessions] 请求参数:', { userId, queryParams: req.query });
+      
       const params: ChatQueryParams = {
         page: parseInt((req.query.page as string) || '1', 10),
         limit: parseInt((req.query.limit as string) || '20', 10),
@@ -56,7 +59,11 @@ export class AIChatController {
         end_date: (req.query.end_date as string) || undefined
       };
 
+      console.log('[getUserSessions] 解析后的参数:', params);
+
       const { sessions, total } = await AIChatService.getUserSessions(userId, params);
+
+      console.log('[getUserSessions] 调用成功，返回数据:', { sessionCount: sessions.length, total });
 
       sendResult(res, {
         data: sessions,
@@ -68,6 +75,7 @@ export class AIChatController {
         }
       });
     } catch (error) {
+      console.error('[getUserSessions] 错误:', error);
       sendError(res, String(error instanceof Error ? error.message : error));
     }
   }

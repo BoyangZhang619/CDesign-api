@@ -37,7 +37,7 @@ async function insertCheckInRecord(req: Request, res: Response): Promise<Respons
         console.log(userId, dailyCheckinId, meal_type, food_source, food_name, food_detail, calories, protein_g, fat_g, carbohydrate_g, fiber_g, sugar_g, meal_time, ai_recognition_flag, image_id);
 
         // 先插入记录到数据库
-        const [result] = await pool.execute(
+        const [result] = await pool.query(
             'INSERT INTO checkin_meal_record (user_id, daily_checkin_id, meal_type, food_source, food_name, food_detail, calories, protein_g, fat_g, carbohydrate_g, fiber_g, sugar_g, meal_time, ai_recognition_flag, image_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [userId ?? null, dailyCheckinId ?? null, meal_type ?? null, food_source ?? null, food_name ?? null, food_detail ?? null, calories ?? null, protein_g ?? null, fat_g ?? null, carbohydrate_g ?? null, fiber_g ?? null, sugar_g ?? null, meal_time ?? null, ai_recognition_flag ?? null, image_id ?? null]
         );
@@ -92,7 +92,7 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
 
         // 更新数据库中的营养信息
         if (nutritionData) {
-            await pool.execute(
+            await pool.query(
                 'UPDATE checkin_meal_record SET calories = ?, protein_g = ?, fat_g = ?, carbohydrate_g = ?, fiber_g = ?, sugar_g = ? WHERE id = ? AND user_id = ?',
                 [
                     nutritionData.calories,
@@ -160,7 +160,7 @@ async function getCheckInRecords(req: Request, res: Response): Promise<Response>
     }
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_meal_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId, userId]
         );
@@ -178,7 +178,7 @@ async function getCheckInRecords(req: Request, res: Response): Promise<Response>
 async function getSummaryResult(req: Request, res: Response): Promise<object> {
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_meal_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId, userId]
         );
@@ -217,7 +217,7 @@ async function getSummary(req: Request, res: Response): Promise<Response> {
 async function getAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
-        const [rows] = await pool.execute(
+        const [rows] = await pool.query(
             'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId]
         );
@@ -253,24 +253,24 @@ async function calculateAISummary(summaryData: object,userId: number) {
         });
 
         if (aiResult.ok) {
-            const dailyCheckinId = (await pool.execute(
+            const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
             ))[0][0]?.id;
 
             if (dailyCheckinId) {
-                const [existingRows] = await pool.execute(
+                const [existingRows] = await pool.query(
                     'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
                     [dailyCheckinId]
                 );
 
                 if ((existingRows as any[]).length > 0) {
-                    await pool.execute(
+                    await pool.query(
                         'UPDATE checkin_ai_summary SET meal_ai_summary = ? WHERE daily_checkin_id = ?',
                         [aiResult.content, dailyCheckinId]
                     );
                 } else {
-                    await pool.execute(
+                    await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, meal_ai_summary) VALUES (?, ?)',
                         [dailyCheckinId, aiResult.content]
                     );
@@ -296,12 +296,12 @@ async function getCheckInRecordsWithPagination(req: Request, res: Response): Pro
         const isToday = req.body.isToday;
         let rows: QueryResult;
         if (isToday) {
-            [rows] = await pool.execute(
+            [rows] = await pool.query(
                 'SELECT * FROM checkin_meal_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()) LIMIT ? OFFSET ?',
                 [userId, userId, limit, offset]
             );
         } else {
-            [rows] = await pool.execute(
+            [rows] = await pool.query(
                 'SELECT * FROM checkin_meal_record WHERE user_id = ? LIMIT ? OFFSET ?',
                 [userId, limit, offset]
             );
