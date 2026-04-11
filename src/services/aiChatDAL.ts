@@ -68,8 +68,6 @@ export class AIChatDAL {
     const { page = 1, limit = 20, search, ai_model, is_starred, start_date, end_date } = params;
     const offset = (page - 1) * limit;
 
-    console.log('[getUserSessions] 参数:', { userId, page, limit, search, ai_model, is_starred, start_date, end_date });
-
     // 构建 WHERE 子句和参数的函数
     const buildWhereParams = () => {
       const queryParams: any[] = [userId];
@@ -108,19 +106,13 @@ export class AIChatDAL {
     try {
       const { where, queryParams: countParams } = buildWhereParams();
 
-      console.log('[getUserSessions] COUNT 查询:', { sql: `SELECT COUNT(*) as total FROM ai_chat_sessions ${where}`, params: countParams });
-
-      // 获取总数 - 使用 query 替代 query
+      // 获取总数
       const [countResult] = await pool.query(`SELECT COUNT(*) as total FROM ai_chat_sessions ${where}`, countParams) as any;
       const total = countResult[0]?.total || 0;
-
-      console.log('[getUserSessions] 总数:', total);
 
       // 获取会话列表
       const { where: whereClause, queryParams: dataParams } = buildWhereParams();
       dataParams.push(limit, offset);
-
-      console.log('[getUserSessions] SELECT 查询:', { sql: `SELECT * FROM ai_chat_sessions ${whereClause} ORDER BY last_message_at DESC, created_at DESC LIMIT ? OFFSET ?`, params: dataParams });
 
       const dataQuery = `
         SELECT * FROM ai_chat_sessions ${whereClause}
@@ -129,11 +121,8 @@ export class AIChatDAL {
       `;
       const [rows] = await pool.query(dataQuery, dataParams) as any;
 
-      console.log('[getUserSessions] 返回结果:', { count: rows.length, total });
-
       return { sessions: rows, total };
     } catch (error) {
-      console.error('[getUserSessions] 错误:', error);
       throw error;
     }
   }
@@ -172,6 +161,10 @@ export class AIChatDAL {
     if (updateData.tags !== undefined) {
       fields.push('tags = ?');
       values.push(updateData.tags);
+    }
+    if (updateData.dashscope_session_id !== undefined) {
+      fields.push('dashscope_session_id = ?');
+      values.push(updateData.dashscope_session_id);
     }
 
     if (fields.length === 0) {
@@ -237,8 +230,6 @@ export class AIChatDAL {
         messageData?.metadata ? JSON.stringify(messageData.metadata) : null
       ];
 
-      console.log('[addMessage] sessionId:', sessionId, 'role:', role, 'values:', values);
-
       const [result] = await pool.query(query, values) as any;
 
       // 更新会话的消息计数和最后消息时间
@@ -246,7 +237,6 @@ export class AIChatDAL {
 
       return this.getMessageById(result.insertId) as Promise<AIChatMessage>;
     } catch (error) {
-      console.error('[addMessage] 错误:', error);
       throw error;
     }
   }

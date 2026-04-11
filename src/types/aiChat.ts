@@ -50,6 +50,7 @@ export interface AIChatSession {
   description?: string;
   ai_model: AIModelType | string;
   ai_app_id?: string;
+  dashscope_session_id?: string; // 阿里云 DashScope session_id（用于多轮对话记忆）
   system_prompt?: string;
   temperature: number;
   max_tokens: number;
@@ -118,6 +119,7 @@ export interface UpdateChatSessionRequest {
   max_tokens?: number;
   is_starred?: boolean;
   tags?: string;
+  dashscope_session_id?: string; // 阿里云 DashScope session_id（用于多轮对话记忆）
 }
 
 /**
@@ -138,6 +140,7 @@ export interface AIResponse {
   data?: {
     text: string;
     finishReason?: string;
+    sessionId?: string; // 阿里云 DashScope session_id（用于多轮对话记忆）
     usage?: {
       promptTokens: number;
       completionTokens: number;
@@ -190,7 +193,7 @@ export interface ChatQueryParams {
 export interface DashScopeRequest {
   input: {
     prompt: string;
-    // 可以添加更多字段如 history, parameters 等
+    session_id?: string; // 用于多轮对话，传递之前的 session_id
   };
   parameters?: Record<string, any>;
   debug?: Record<string, any>;
@@ -203,6 +206,7 @@ export interface DashScopeResponse {
   output: {
     text: string;
     finishReason?: string;
+    session_id?: string; // 阿里云返回的 session_id，用于后续多轮对话
   };
   usage?: {
     input_tokens: number;

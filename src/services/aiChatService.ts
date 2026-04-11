@@ -161,6 +161,13 @@ export class AIChatService {
       }
     );
 
+    // 如果 AI 返回了 session_id，保存到数据库以支持多轮对话记忆
+    if (aiResponse.data?.sessionId) {
+      await AIChatDAL.updateSession(userId, sessionId, {
+        dashscope_session_id: aiResponse.data.sessionId
+      });
+    }
+
     return {
       userMessage: savedUserMessage,
       aiMessage: savedAiMessage,
@@ -191,6 +198,7 @@ export class AIChatService {
 
   /**
    * 调用阿里云 DashScope API（AI Agent）
+   * 支持多轮对话通过 session_id
    */
   private static async callDashScope(
     session: AIChatSession,
@@ -199,7 +207,6 @@ export class AIChatService {
   ): Promise<AIResponse> {
     const apiKey = process.env.DASHSCOPE_API_KEY;
     const appId = session.ai_app_id || process.env.AI_AGENT_APP_ID;
-    console.log(`调用 DashScope API，appId: ${appId}, model: ${session.ai_model}`);
 
     if (!apiKey || !appId) {
       throw new Error('缺少 DashScope API 配置');
@@ -207,9 +214,12 @@ export class AIChatService {
 
     const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
 
+    // 构建请求体，包含 session_id 用于多轮对话记忆
     const requestBody: DashScopeRequest = {
       input: {
-        prompt: userMessage
+        prompt: userMessage,
+        // 如果已有 session_id，传递用于维持对话上下文
+        ...(session.dashscope_session_id && { session_id: session.dashscope_session_id })
       },
       parameters: {
         temperature: session.temperature || 0.7,
@@ -227,12 +237,14 @@ export class AIChatService {
       });
 
       if (response.status === 200 && response.data.output?.text) {
+        // 返回 AI 响应，包含 session_id 用于后续保存
         return {
           success: true,
           data: {
             text: response.data.output.text,
             finishReason: response.data.output.finishReason,
             modelName: 'dashscope-ai-agent',
+            sessionId: response.data.output.session_id, // 保存 session_id 用于下一轮对话
             usage: {
               promptTokens: response.data.usage?.input_tokens || 0,
               completionTokens: response.data.usage?.output_tokens || 0,
@@ -382,25 +394,32 @@ export class AIChatService {
       content,
       { content_type: ContentTypeEnum.TEXT }
     );
-    console.log('[sendMessageStream] 用户消息已保存:', userMessage.id);
 
     // 4. 获取聊天历史
     const chatHistory = await AIChatDAL.getSessionAllMessages(sessionId);
-    console.log('[sendMessageStream] 聊天历史:', chatHistory.length, '条消息');
 
     // 5. 调用 AI 流式方法
     let totalOutputTokens = 0;
     let aiContent = '';
+    let returnedSessionId: string | undefined; // 用于保存返回的 session_id
     const startTime = Date.now();
 
     try {
-      console.log('[sendMessageStream] 开始调用 AI 流式...');
-      await this.callAIStream(session, content, chatHistory, onChunk, (tokens) => {
-        totalOutputTokens = tokens;
-      }, (chunk) => {
-        aiContent += chunk;
-      });
-      console.log('[sendMessageStream] AI 流式完成，内容长度:', aiContent.length);
+      await this.callAIStream(
+        session,
+        content,
+        chatHistory,
+        onChunk,
+        (tokens) => {
+          totalOutputTokens = tokens;
+        },
+        (chunk) => {
+          aiContent += chunk;
+        },
+        (sessionId) => {
+          returnedSessionId = sessionId; // 捕获返回的 session_id
+        }
+      );
 
       const responseTime = Date.now() - startTime;
 
@@ -420,9 +439,15 @@ export class AIChatService {
           response_time_ms: responseTime
         }
       );
-      console.log('[sendMessageStream] AI 消息已保存:', aiMessage.id);
 
-      // 7. 更新会话统计
+      // 7. 如果返回了 session_id，保存到数据库以支持多轮对话记忆
+      if (returnedSessionId) {
+        await AIChatDAL.updateSession(userId, sessionId, {
+          dashscope_session_id: returnedSessionId
+        });
+      }
+
+      // 8. 更新会话统计
       await AIChatDAL.updateSessionStats(sessionId, {
         output_tokens: totalOutputTokens,
         total_tokens: totalOutputTokens
@@ -447,12 +472,13 @@ export class AIChatService {
     chatHistory: any[],
     onChunk: (chunk: string) => void,
     onTokens: (tokens: number) => void,
-    onContent: (content: string) => void
+    onContent: (content: string) => void,
+    onSessionId?: (sessionId: string) => void
   ): Promise<void> {
     const model = session.ai_model || 'dashscope';
 
     if (model === 'dashscope') {
-      return this.callDashScopeStream(session, userMessage, chatHistory, onChunk, onTokens, onContent);
+      return this.callDashScopeStream(session, userMessage, chatHistory, onChunk, onTokens, onContent, onSessionId);
     } else if (model === 'gpt-4' || model === 'gpt-3.5-turbo') {
       throw new Error('OpenAI 流式支持开发中');
     } else {
@@ -461,7 +487,7 @@ export class AIChatService {
   }
 
   /**
-   * DashScope 流式调用
+   * DashScope 流式调用（支持多轮对话）
    */
   private static async callDashScopeStream(
     session: any,
@@ -469,11 +495,11 @@ export class AIChatService {
     chatHistory: any[],
     onChunk: (chunk: string) => void,
     onTokens: (tokens: number) => void,
-    onContent: (content: string) => void
+    onContent: (content: string) => void,
+    onSessionId?: (sessionId: string) => void // 新增：回调函数处理返回的 session_id
   ): Promise<void> {
     const apiKey = process.env.DASHSCOPE_API_KEY;
     const appId = session.ai_app_id || process.env.AI_AGENT_APP_ID;
-    console.log(`调用 DashScope 流式 API，appId: ${appId}, model: ${session.ai_model}`);
     const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
 
     // 构建请求体（DashScope 的流式模式）
@@ -484,7 +510,11 @@ export class AIChatService {
     // 
     // 我们使用 message_format，它能在最后返回完整的 text 内容
     const requestBody = {
-      input: { prompt: userMessage },
+      input: { 
+        prompt: userMessage,
+        // 如果已有 session_id，传递用于维持对话上下文（多轮对话记忆）
+        ...(session.dashscope_session_id && { session_id: session.dashscope_session_id })
+      },
       parameters: {
         flow_stream_mode: 'message_format', // 推荐使用，能获得结构化的流式返回
         temperature: session.temperature || 0.7,
@@ -517,8 +547,6 @@ export class AIChatService {
       let buffer = '';
       let totalTokens = 0;
       let chunkCount = 0;
-
-      console.log('[DashScope SSE流式] 开始读取响应流');
 
       while (true) {
         const { done, value } = await reader.read();
@@ -557,6 +585,11 @@ export class AIChatService {
                 onContent(json.output.text);
               }
 
+              // 处理返回的 session_id（用于多轮对话记忆）
+              if (json.output?.session_id && onSessionId) {
+                onSessionId(json.output.session_id);
+              }
+
               // 提取 Token 信息
               if (json.usage?.output_tokens) {
                 totalTokens = json.usage.output_tokens;
@@ -587,6 +620,11 @@ export class AIChatService {
               chunkCount++;
               onChunk(json.output.text);
               onContent(json.output.text);
+            }
+
+            // 处理返回的 session_id
+            if (json.output?.session_id && onSessionId) {
+              onSessionId(json.output.session_id);
             }
 
             if (json.usage?.output_tokens) {
