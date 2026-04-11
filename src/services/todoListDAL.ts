@@ -19,16 +19,71 @@ import type {
 
 export class TodoListDAL {
     /**
+     * 计算任务的 due_date 基于 date_type
+     * - tomorrow: 明天
+     * - workday: 下一个工作日
+     * - weekend: 下一个周末（周六或周日）
+     * - everyday: 今天
+     */
+    private static calculateDueDate(dateType: string): string {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        if (dateType === 'tomorrow') {
+            // 明天
+            return this.formatDate(tomorrow);
+        } else if (dateType === 'everyday') {
+            // 每天 - 从今天开始
+            return this.formatDate(today);
+        } else if (dateType === 'workday') {
+            // 下一个工作日
+            let date = new Date(tomorrow);
+            while (date.getDay() === 0 || date.getDay() === 6) {
+                date.setDate(date.getDate() + 1);
+            }
+            return this.formatDate(date);
+        } else if (dateType === 'weekend') {
+            // 下一个周末（周六或周日）
+            let date = new Date(tomorrow);
+            while (date.getDay() !== 0 && date.getDay() !== 6) {
+                date.setDate(date.getDate() + 1);
+            }
+            return this.formatDate(date);
+        }
+        return this.formatDate(tomorrow); // 默认明天
+    }
+
+    /**
+     * 格式化日期为 YYYY-MM-DD
+     */
+    private static formatDate(date: Date): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    /**
      * 创建任务
      */
     static async createTask(userId: number, taskData: CreateTaskRequest): Promise<Task> {
+        // 计算 due_date
+        const calculatedDueDate = this.calculateDueDate(taskData.date_type || 'tomorrow');
+        
+        // "tomorrow" 类型时，设置 due_time 为次日（24:00 表示次日00:00）
+        let dueTime = taskData.due_time || null;
+        if ((taskData.date_type || 'tomorrow') === 'tomorrow' && !dueTime) {
+            dueTime = '00:00'; // 默认明天 00:00
+        }
+
         const query = `
       INSERT INTO tasks (
-        user_id, title, description, type, status, priority, 
+        user_id, title, description, type, category, status, priority, 
         due_date, due_time, is_daily, category_icon,
         ai_suggestion_reason, checkin_type, checkin_recurrence, 
-        checkin_preset, ai_prompt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        checkin_preset, preset_type, date_type, ai_prompt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
         const values = [
@@ -36,16 +91,19 @@ export class TodoListDAL {
             taskData.title,
             taskData.description || null,
             taskData.type,
-            'pending',
+            taskData.category || 'custom',
+            'pending', // 所有类型初始状态都是 pending
             taskData.priority,
-            taskData.due_date,
-            taskData.due_time || null,
+            calculatedDueDate,
+            dueTime,
             taskData.is_daily || false,
             taskData.category_icon || null,
             null,
             taskData.checkin_type || null,
             taskData.checkin_recurrence || null,
             taskData.checkin_preset || null,
+            taskData.preset_type || null,
+            taskData.date_type || 'tomorrow',
             taskData.ai_prompt || null
         ];
 
@@ -55,28 +113,71 @@ export class TodoListDAL {
 
     /**
      * 根据 ID 获取任务
+     * 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
+     * 如果有，设置 status 为 'completed'
      */
     static async getTaskById(userId: number, taskId: number): Promise<Task | null> {
         console.log('Fetching task with ID:', taskId, 'for user ID:', userId);
         const query = 'SELECT * FROM tasks WHERE id = ? AND user_id = ?';
         const [rows] = await pool.query(query, [taskId, userId]) as any;
-        return rows[0] || null;
+        
+        if (!rows[0]) {
+            return null;
+        }
+
+        const task = rows[0];
+        const dateType = task.date_type || 'tomorrow';
+        
+        // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
+        if (dateType !== 'tomorrow') {
+            const today = new Date().toISOString().split('T')[0];
+            const checkQuery = `
+                SELECT COUNT(*) as count FROM task_completion_records 
+                WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
+            `;
+            const [checkResult] = await pool.query(checkQuery, [taskId, userId, today]) as any;
+            
+            if (checkResult[0].count > 0) {
+                // 今天已有完成记录，标记为已完成
+                task.status = 'completed';
+                console.log(`✅ 任务 ${taskId} 今天已完成过，设置 status = 'completed'`);
+            }
+        }
+        
+        return task;
     }
 
     /**
-     * 获取用户任务列表
+     * 获取用户任务列表 - 智能过滤
+     * 默认返回当天应该显示的任务：
+     * 1. 当天期限的非"tomorrow"类型任务
+     * 2. 当天期限的"tomorrow"类型任务
+     * 3. 逾期的"tomorrow"类型任务
      */
     static async getUserTasks(userId: number, params: TaskQueryParams): Promise<{ tasks: Task[]; total: number }> {
         const { date, status, type, priority, search, page = 1, limit = 20 } = params;
         const offset = (page - 1) * limit;
 
+        // 如果没有指定日期，使用当前日期
+        const queryDate = date || new Date().toISOString().split('T')[0];
+
         let whereClause = 'WHERE user_id = ?';
         let queryParams: any[] = [userId];
 
-        if (date) {
-            whereClause += ' AND due_date = ?';
-            queryParams.push(date);
-        }
+        // 构建智能过滤条件
+        // 返回：所有当天的任务（完成和未完成）+ 逾期的"tomorrow"任务（未完成）
+        let dateFilterClause = `
+            (
+                -- 条件1: 当天期限的所有任务（不管完成没完成）
+                (due_date = ?)
+                OR
+                -- 条件2: 逾期的"tomorrow"类型任务（未完成）
+                (due_date < ? AND date_type = 'tomorrow' AND status != 'completed')
+            )
+        `;
+
+        whereClause += ' AND ' + dateFilterClause;
+        queryParams.push(queryDate, queryDate);
 
         if (status) {
             whereClause += ' AND status = ?';
@@ -98,28 +199,62 @@ export class TodoListDAL {
             const searchPattern = `%${search}%`;
             queryParams.push(searchPattern, searchPattern);
         }
+
         // 获取总数
         const countQuery = `SELECT COUNT(*) as total FROM tasks ${whereClause}`;
         const [countResult] = await pool.query(countQuery, queryParams) as any;
         const total = countResult[0].total;
-        // 获取任务列表
-        const dataQuery = `SELECT * FROM tasks ${whereClause} ORDER BY priority = 'high' DESC, priority = 'medium' DESC, due_date ASC, created_at DESC LIMIT ?, ?`;
-        console.log(dataQuery);
-        // 1. 显式构建参数数组，确保它是纯净的
-        const finalParams = [...queryParams, offset, limit];
 
-        // 2. 深度打印，看清楚每一个值的具体内容和索引
-        console.log("--- 调试参数详情 ---");
-        console.log("SQL语句中的问号数量:", (dataQuery.match(/\?/g) || []).length);
-        console.log("参数数组长度:", finalParams.length);
-        finalParams.forEach((val, i) => {
-            console.log(`参数[${i}] 内容:`, val, ` 类型:`, typeof val);
+        // 获取任务列表
+        const dataQuery = `
+            SELECT * FROM tasks ${whereClause} 
+            ORDER BY 
+                CASE WHEN due_date < ? THEN 0 ELSE 1 END,  -- 逾期优先
+                priority = 'high' DESC, 
+                priority = 'medium' DESC, 
+                due_date ASC, 
+                created_at DESC 
+            LIMIT ?, ?
+        `;
+
+        const finalParams = [...queryParams, queryDate, offset, limit];
+
+        console.log('📋 getUserTasks 查询条件:', {
+            queryDate,
+            status,
+            type,
+            priority,
+            search,
+            offset,
+            limit
         });
 
-        // 3. 执行时使用这个显式数组
         const [rows] = await pool.query(dataQuery, finalParams) as any || [];
-        console.log("11111111111111111111", rows);
-        return { tasks: rows, total: total };
+        
+        // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
+        const today = queryDate;
+        const processedRows = [];
+        
+        for (const task of rows) {
+            const dateType = task.date_type || 'tomorrow';
+            if (dateType !== 'tomorrow') {
+                const checkQuery = `
+                    SELECT COUNT(*) as count FROM task_completion_records 
+                    WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
+                `;
+                const [checkResult] = await pool.query(checkQuery, [task.id, userId, today]) as any;
+                
+                if (checkResult[0].count > 0) {
+                    // 今天已有完成记录，标记为已完成
+                    task.status = 'completed';
+                    console.log(`✅ 任务 ${task.id} 今天已完成过，设置 status = 'completed'`);
+                }
+            }
+            processedRows.push(task);
+        }
+        
+        console.log(`✅ 获取任务 ${processedRows.length} 条，总计 ${total} 条`);
+        return { tasks: processedRows, total: total };
     }
 
     /**
@@ -136,6 +271,14 @@ export class TodoListDAL {
         if (updateData.description !== undefined) {
             fields.push('description = ?');
             values.push(updateData.description);
+        }
+        if (updateData.type !== undefined) {
+            fields.push('type = ?');
+            values.push(updateData.type);
+        }
+        if (updateData.category !== undefined) {
+            fields.push('category = ?');
+            values.push(updateData.category);
         }
         if (updateData.priority !== undefined) {
             fields.push('priority = ?');
@@ -160,6 +303,14 @@ export class TodoListDAL {
         if (updateData.checkin_preset !== undefined) {
             fields.push('checkin_preset = ?');
             values.push(updateData.checkin_preset);
+        }
+        if (updateData.preset_type !== undefined) {
+            fields.push('preset_type = ?');
+            values.push(updateData.preset_type);
+        }
+        if (updateData.date_type !== undefined) {
+            fields.push('date_type = ?');
+            values.push(updateData.date_type);
         }
 
         if (fields.length === 0) {
@@ -200,13 +351,32 @@ export class TodoListDAL {
         try {
             await connection.beginTransaction();
 
-            // 更新任务状态
-            const updateQuery = `
-        UPDATE tasks 
-        SET status = 'completed', completed_date = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND user_id = ?
-      `;
-            await connection.query(updateQuery, [actualDate, taskId, userId]);
+            // 根据 date_type 决定是否更新 status
+            // - "tomorrow" 类型：完成后标记为 completed
+            // - 其他类型（everyday/workday/weekend）：保持 pending（循环任务）
+            const dateType = (task as any).date_type || 'tomorrow';
+            let updateQuery: string;
+            let updateParams: any[];
+
+            if (dateType === 'tomorrow') {
+                // "tomorrow" 类型：标记为已完成
+                updateQuery = `
+          UPDATE tasks 
+          SET status = 'completed', completed_date = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND user_id = ?
+        `;
+                updateParams = [actualDate, taskId, userId];
+            } else {
+                // 其他类型（everyday/workday/weekend）：只记录完成时间，保持 pending
+                updateQuery = `
+          UPDATE tasks 
+          SET completed_date = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND user_id = ?
+        `;
+                updateParams = [actualDate, taskId, userId];
+            }
+
+            await connection.query(updateQuery, updateParams);
 
             // 记录完成记录
             const completionStatus = this.calculateCompletionStatus(task.due_date, actualDate);
@@ -242,13 +412,34 @@ export class TodoListDAL {
      * 标记任务为未完成
      */
     static async uncompleteTask(userId: number, taskId: number): Promise<boolean> {
-        const query = `
-      UPDATE tasks 
-      SET status = 'pending', completed_date = NULL, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND user_id = ?
-    `;
-        const [result] = await pool.query(query, [taskId, userId]) as any;
-        return result.affectedRows > 0;
+        // 获取任务信息
+        const task = await this.getTaskById(userId, taskId);
+        if (!task) {
+            return false;
+        }
+
+        const dateType = (task as any).date_type || 'tomorrow';
+        
+        if (dateType === 'tomorrow') {
+            // "tomorrow"类型：更新 status 为 pending
+            const query = `
+        UPDATE tasks 
+        SET status = 'pending', completed_date = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+      `;
+            const [result] = await pool.query(query, [taskId, userId]) as any;
+            return result.affectedRows > 0;
+        } else {
+            // 循环任务：删除今天的完成记录
+            const today = new Date().toISOString().split('T')[0];
+            const deleteQuery = `
+        DELETE FROM task_completion_records 
+        WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
+      `;
+            const [result] = await pool.query(deleteQuery, [taskId, userId, today]) as any;
+            console.log(`✅ 删除任务 ${taskId} 今天的完成记录，影响行数: ${result.affectedRows}`);
+            return result.affectedRows > 0;
+        }
     }
 
     /**
@@ -269,19 +460,21 @@ export class TodoListDAL {
             "SUM(IF(status = 'completed', 1, 0)) as `completed`,",
             "SUM(IF(status = 'pending', 1, 0)) as `pending`,",
             "SUM(IF(status = 'overdue', 1, 0)) as `overdue`,",
+            // 按旧的 type 统计（兼容）
             "SUM(IF(type = 'checkin_exercise', 1, 0)) as `checkin_exercise`,",
             "SUM(IF(type = 'checkin_meal', 1, 0)) as `checkin_meal`,",
             "SUM(IF(type = 'checkin_sleep', 1, 0)) as `checkin_sleep`,",
             "SUM(IF(type = 'custom', 1, 0)) as `custom_count`,",
             "SUM(IF(type = 'ai_suggested', 1, 0)) as `ai_suggested`,",
+            // 按优先级统计
             "SUM(IF(priority = 'high', 1, 0)) as `high_p`,",
             "SUM(IF(priority = 'medium', 1, 0)) as `medium_p`,",
             "SUM(IF(priority = 'low', 1, 0)) as `low_p`",
             `FROM tasks ${whereClause}`
-        ].join(" "); // 用 join(" ") 强制把所有内容压成一行，且每行之间必有一个空格
+        ].join(" ");
 
         const [rows] = await pool.query(query, queryParams) as any;
-        console.log("Task Statistics Query Result:", rows);
+        console.log("📊 Task Statistics Query Result:", rows);
         const stats = rows[0];
 
         const total = stats.total || 0;
@@ -301,9 +494,9 @@ export class TodoListDAL {
                 ai_suggested: stats.ai_suggested || 0
             },
             byPriority: {
-                high: stats.high_priority || 0,
-                medium: stats.medium_priority || 0,
-                low: stats.low_priority || 0
+                high: stats.high_p || 0,
+                medium: stats.medium_p || 0,
+                low: stats.low_p || 0
             }
         };
     }

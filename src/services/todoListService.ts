@@ -110,8 +110,30 @@ export class TodoListService {
       throw new Error('任务不存在');
     }
 
-    if (task.status === 'completed') {
-      throw new Error('任务已完成');
+    const actualDate = completedDate || new Date().toISOString().split('T')[0];
+    const dateType = (task as any).date_type || 'tomorrow';
+
+    // 对于"tomorrow"类型任务：检查是否已完成
+    // 对于循环任务（everyday/workday/weekend）：检查今天是否已完成过
+    if (dateType === 'tomorrow') {
+      if (task.status === 'completed') {
+        throw new Error('任务已完成');
+      }
+    } else {
+      // 循环任务：检查 completed_date 是否为今天
+      if (task.completed_date) {
+        let completedDateOnly = '';
+        const completedDateValue = task.completed_date as any;
+        if (typeof completedDateValue === 'string') {
+          completedDateOnly = completedDateValue.split('T')[0];
+        } else {
+          // 如果是其他类型（比如 Date 对象），转换为字符串
+          completedDateOnly = new Date(completedDateValue).toISOString().split('T')[0];
+        }
+        if (completedDateOnly === actualDate) {
+          throw new Error('今天已完成过此循环任务');
+        }
+      }
     }
 
     if (completedDate && !this.isValidDate(completedDate)) {

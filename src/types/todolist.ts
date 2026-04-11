@@ -186,12 +186,16 @@ export interface CreateTaskRequest {
 export interface UpdateTaskRequest {
   title?: string;
   description?: string;
+  type?: TaskType;
+  category?: 'diet' | 'exercise' | 'sleep' | 'custom';
   priority?: TaskPriority;
   due_date?: string;
   due_time?: string;
   is_daily?: boolean;
   category_icon?: string;
   checkin_preset?: string;
+  preset_type?: string;
+  date_type?: CheckinRecurrence;
 }
 
 /**
