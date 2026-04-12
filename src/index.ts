@@ -19,6 +19,7 @@ import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
 import characterAvatarRouters from './routes/characterAvatarRouters.js';
 import todolistRouters from './routes/todoListRouters.js';
+import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 
 import { getCurrentTimeString } from './util/dateTime.js';
 
@@ -75,6 +76,7 @@ app.use('/api/sleep-checkin', sleepCheckinRouters);
 app.use('/api/exercise-checkin', exerciseCheckinRouters);
 app.use('/api/history', historyRouters);
 app.use('/api/tasks', todolistRouters);
+app.use('/api/task-completion-history', taskCompletionHistoryRouters);
 // app.use('/api/agg',(req,res) =>{next();});
 
 app.get('/', (_, res) => { res.send('why are you here?'); });
