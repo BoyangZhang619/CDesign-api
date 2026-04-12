@@ -3,6 +3,7 @@
  */
 
 import pool from '../config/db.js';
+import { getCurrentDateString } from '../util/dateTime.js';
 import type {
     Task,
     TaskCompletionRecord,
@@ -130,7 +131,7 @@ export class TodoListDAL {
         
         // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
         if (dateType !== 'tomorrow') {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getCurrentDateString();
             const checkQuery = `
                 SELECT COUNT(*) as count FROM task_completion_records 
                 WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
@@ -158,8 +159,23 @@ export class TodoListDAL {
         const { date, status, type, priority, search, page = 1, limit = 20 } = params;
         const offset = (page - 1) * limit;
 
-        // 如果没有指定日期，使用当前日期
-        const queryDate = date || new Date().toISOString().split('T')[0];
+        // 如果没有指定日期，使用当前东八区日期（重要：修复时区问题）
+        const queryDate = date || getCurrentDateString();
+        
+        // 诊断：检查该用户是否有任何任务
+        const diagnosticQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ?';
+        const [diagnosticResult] = await pool.query(diagnosticQuery, [userId]) as any;
+        console.log(`🔍 [诊断] 用户 ${userId} 在数据库中的总任务数: ${diagnosticResult[0].total}`);
+        
+        // 诊断：检查该日期的任务
+        const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? AND due_date = ?';
+        const [dateCheckResult] = await pool.query(dateCheckQuery, [userId, queryDate]) as any;
+        console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total}`);
+        
+        // 诊断：打印所有任务
+        const allTasksQuery = 'SELECT id, user_id, title, due_date, status FROM tasks WHERE user_id = ? LIMIT 10';
+        const [allTasks] = await pool.query(allTasksQuery, [userId]) as any;
+        console.log(`🔍 [诊断] 用户 ${userId} 的最近10个任务:`, allTasks);
 
         let whereClause = 'WHERE user_id = ?';
         let queryParams: any[] = [userId];
@@ -226,10 +242,17 @@ export class TodoListDAL {
             priority,
             search,
             offset,
-            limit
+            limit,
+            userId
         });
+        
+        console.log('📊 SQL 查询语句:', dataQuery);
+        console.log('📊 SQL 参数:', finalParams);
 
         const [rows] = await pool.query(dataQuery, finalParams) as any || [];
+        
+        console.log(`✅ 查询结果: 返回 ${rows.length} 条记录，总数: ${total}`);
+        console.log('📝 任务数据:', rows);
         
         // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
         const today = queryDate;
@@ -338,7 +361,7 @@ export class TodoListDAL {
      * 标记任务为完成
      */
     static async completeTask(userId: number, taskId: number, completedDate?: string): Promise<boolean> {
-        const actualDate = completedDate || new Date().toISOString().split('T')[0];
+        const actualDate = completedDate || getCurrentDateString();
 
         // 获取任务信息用于记录
         const task = await this.getTaskById(userId, taskId);
@@ -431,7 +454,7 @@ export class TodoListDAL {
             return result.affectedRows > 0;
         } else {
             // 循环任务：删除今天的完成记录
-            const today = new Date().toISOString().split('T')[0];
+            const today = getCurrentDateString();
             const deleteQuery = `
         DELETE FROM task_completion_records 
         WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?

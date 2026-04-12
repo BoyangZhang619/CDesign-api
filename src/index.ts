@@ -45,7 +45,20 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-// app.use((req, res, next) => { consoleLog(req); next(); });
+app.use((req, res, next) => { consoleLog(req); next(); });
+
+// 为 /api/tasks 添加专门的日志中间件
+app.use('/api/tasks', (req, res, next) => {
+    console.log('\n🚀 [/api/tasks 中间件] 请求进入');
+    console.log('METHOD:', req.method);
+    console.log('URL:', req.originalUrl);
+    console.log('Query:', req.query);
+    console.log('Headers:', {
+        authorization: req.headers.authorization ? '✅ 存在' : '❌ 缺失',
+        'content-type': req.headers['content-type']
+    });
+    next();
+});
 
 // app.use('/', rateLimit({ windowMs: 60000, max: 60 })); // 全局速率限制，每分钟每个IP最多60次请求
 // app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速率限制，每分钟每个IP最多20次请求

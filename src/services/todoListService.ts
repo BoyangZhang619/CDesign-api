@@ -3,7 +3,7 @@
  */
 
 import { TodoListDAL } from './todoListDAL.js';
-import { getCurrentDateString } from '../util/dateTime.js';
+import { getCurrentDateString, getDateString } from '../util/dateTime.js';
 import type {
   Task,
   TaskStatistics,
@@ -50,7 +50,10 @@ export class TodoListService {
    * 获取用户任务列表
    */
   static async getUserTasks(userId: number, params: TaskQueryParams): Promise<{ tasks: Task[]; total: number }> {
-    return TodoListDAL.getUserTasks(userId, params);
+    console.log('📝 [TodoListService.getUserTasks] 接收参数:', { userId, params });
+    const result = await TodoListDAL.getUserTasks(userId, params);
+    console.log(`✅ [TodoListService.getUserTasks] 返回 ${result.tasks.length} 条任务`);
+    return result;
   }
 
   /**
@@ -110,7 +113,7 @@ export class TodoListService {
       throw new Error('任务不存在');
     }
 
-    const actualDate = completedDate || new Date().toISOString().split('T')[0];
+    const actualDate = completedDate || getCurrentDateString();
     const dateType = (task as any).date_type || 'tomorrow';
 
     // 对于"tomorrow"类型任务：检查是否已完成
@@ -128,7 +131,7 @@ export class TodoListService {
           completedDateOnly = completedDateValue.split('T')[0];
         } else {
           // 如果是其他类型（比如 Date 对象），转换为字符串
-          completedDateOnly = new Date(completedDateValue).toISOString().split('T')[0];
+          completedDateOnly = getDateString(new Date(completedDateValue));
         }
         if (completedDateOnly === actualDate) {
           throw new Error('今天已完成过此循环任务');
@@ -176,7 +179,7 @@ export class TodoListService {
    * 同步打卡
    */
   static async syncCheckin(userId: number, data: SyncCheckinRequest): Promise<Task | null> {
-    const checkinDate = data.checkin_date || new Date().toISOString().split('T')[0];
+    const checkinDate = data.checkin_date || getCurrentDateString();
 
     if (!this.isValidDate(checkinDate)) {
       throw new Error('打卡日期格式错误，应为 YYYY-MM-DD');
@@ -237,7 +240,7 @@ export class TodoListService {
     // 这里是模拟实现，实际应该调用 OpenAI API
     // 获取用户的打卡情况和历史数据
     const checkinTasks = await TodoListDAL.getCheckinTasks(userId);
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentDate = getCurrentDateString();
 
     const suggestions: CreateTaskRequest[] = [];
 

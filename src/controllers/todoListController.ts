@@ -34,9 +34,14 @@ async function getTasks(req: Request, res: Response): Promise<void> {
             page: parseInt((req.query.page as string) || '1', 10),
             limit: parseInt((req.query.limit as string) || '20', 10)
         };
-        console.log(params,userId);
+        
+        console.log('🔍 [getTasks 控制器] 接收参数:', { params, userId });
+        
         const { tasks, total } = await TodoListService.getUserTasks(userId, params);
-        console.log(tasks,total);
+        
+        console.log(`🎯 [getTasks 控制器] 返回结果: ${tasks.length} 条任务，总计 ${total} 条`);
+        console.log('📦 任务数据:', tasks);
+        
         sendResult(res, {
             data: tasks,
             pagination: {
@@ -47,6 +52,7 @@ async function getTasks(req: Request, res: Response): Promise<void> {
             }
         });
     } catch (error) {
+        console.error('❌ [getTasks 控制器] 错误:', error);
         sendError(res, String(error instanceof Error ? error.message : error));
     }
 }
