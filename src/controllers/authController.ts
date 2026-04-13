@@ -309,7 +309,15 @@ async function updateLastLoginTime(userId: number): Promise<void> {
 // 更新用户信息
 async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     const {
-        email = null, nickname = null, avatar_url = null, phone = null, role = null } = req.body;
+        email = null, 
+        nickname = null, 
+        avatar_url = null, 
+        phone = null, 
+        role = null,
+        bio = null,
+        website = null,
+        location = null
+    } = req.body;
     const userId = req.user.userId ?? null;
     try {
         const [userRows] = await pool.query(
@@ -323,12 +331,15 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
 
         // 更新用户信息
         await pool.query(
-            'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ? WHERE id = ?',
+            'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ?, bio = ?, website = ?, location = ? WHERE id = ?',
             [
                 nickname,
                 avatar_url,
                 phone,
                 role,
+                bio,
+                website,
+                location,
                 userId
             ]
         );
