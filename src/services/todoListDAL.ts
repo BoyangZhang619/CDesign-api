@@ -365,6 +365,7 @@ export class TodoListDAL {
 
         // 获取任务信息用于记录
         const task = await this.getTaskById(userId, taskId);
+        console.log(`✅ 标记任务 ${taskId} 为完成，完成日期: ${actualDate}，任务信息:`, task);
         if (!task) {
             return false;
         }
@@ -453,15 +454,37 @@ export class TodoListDAL {
             const [result] = await pool.query(query, [taskId, userId]) as any;
             return result.affectedRows > 0;
         } else {
-            // 循环任务：删除今天的完成记录
+            // 循环任务：删除今天的完成记录，并清除 completed_date
             const today = getCurrentDateString();
-            const deleteQuery = `
-        DELETE FROM task_completion_records 
-        WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
-      `;
-            const [result] = await pool.query(deleteQuery, [taskId, userId, today]) as any;
-            console.log(`✅ 删除任务 ${taskId} 今天的完成记录，影响行数: ${result.affectedRows}`);
-            return result.affectedRows > 0;
+            const connection = await pool.getConnection();
+            try {
+                await connection.beginTransaction();
+                
+                // 1. 删除今天的完成记录
+                const deleteQuery = `
+          DELETE FROM task_completion_records 
+          WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
+        `;
+                const [deleteResult] = await connection.query(deleteQuery, [taskId, userId, today]) as any;
+                console.log(`✅ 删除任务 ${taskId} 今天的完成记录，影响行数: ${deleteResult.affectedRows}`);
+                
+                // 2. 更新 tasks 表中的 completed_date 为 NULL（清除今天的完成标记）
+                const updateQuery = `
+          UPDATE tasks 
+          SET completed_date = NULL, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND user_id = ?
+        `;
+                await connection.query(updateQuery, [taskId, userId]);
+                console.log(`✅ 清除任务 ${taskId} 的 completed_date`);
+                
+                await connection.commit();
+                return deleteResult.affectedRows > 0;
+            } catch (error) {
+                await connection.rollback();
+                throw error;
+            } finally {
+                connection.release();
+            }
         }
     }
 
@@ -627,12 +650,21 @@ export class TodoListDAL {
      * 计算完成状态（提前/准时/迟到）
      */
     private static calculateCompletionStatus(dueDate: string, completionDate: string): string {
-        const due = new Date(dueDate).getTime();
-        const completed = new Date(completionDate).getTime();
+        // 处理日期格式 (YYYY-MM-DD) - 直接比较日期字符串，避免时区问题
+        // 提取 YYYY-MM-DD 部分（如果包含时间）
+        console.log(`📅 计算完成状态: dueDate = ${dueDate}, completionDate = ${completionDate}`);
+        dueDate = new Date(dueDate + 8 * 60 * 60 * 1000).toISOString();
+        const dueDateOnly = dueDate ? dueDate.split('T')[0] : null;
+        const completionDateOnly = completionDate ? completionDate.split('T')[0] : null;
 
-        if (completed < due) {
+        if (!dueDateOnly || !completionDateOnly) {
+            return 'on_time'; // 如果没有到期日期，认为准时完成
+        }
+
+        // 直接比较日期字符串（YYYY-MM-DD 格式自然排序就是时间顺序）
+        if (completionDateOnly < dueDateOnly) {
             return 'early';
-        } else if (completed === due) {
+        } else if (completionDateOnly === dueDateOnly) {
             return 'on_time';
         } else {
             return 'late';
