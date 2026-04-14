@@ -21,7 +21,7 @@ import characterAvatarRouters from './routes/characterAvatarRouters.js';
 import todolistRouters from './routes/todoListRouters.js';
 import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 
-import { getCurrentTimeString } from './util/dateTime.js';
+import { getCurrentDateTimeString } from './util/dateTime.js';
 
 const fixedOrigins = [
     'http://localhost:5173',
@@ -87,7 +87,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
 function consoleLog(req: express.Request) {
     console.log('=============================== NEW REQUEST ===============================');
-    console.log('TIME:', getCurrentTimeString());
+    console.log('TIME:', getCurrentDateTimeString());
     console.log('METHOD:', req.method);
     console.log('URL:', req.originalUrl);
     console.log('ORIGIN:', req.headers.origin);

@@ -3,7 +3,7 @@
  */
 
 import pool from '../config/db.js';
-import { getCurrentDateString } from '../util/dateTime.js';
+import { getCurrentDateString, getCurrentDateTimeString, getDateTimeString } from '../util/dateTime.js';
 import type {
     Task,
     TaskCompletionRecord,
@@ -579,8 +579,8 @@ export class TodoListDAL {
             checkin_type: checkinType,
             checkin_date: checkinDate,
             completed: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            created_at: getCurrentDateTimeString(),
+            updated_at: getCurrentDateTimeString()
         };
     }
 
@@ -653,9 +653,10 @@ export class TodoListDAL {
         // 处理日期格式 (YYYY-MM-DD) - 直接比较日期字符串，避免时区问题
         // 提取 YYYY-MM-DD 部分（如果包含时间）
         console.log(`📅 计算完成状态: dueDate = ${dueDate}, completionDate = ${completionDate}`);
-        dueDate = new Date(dueDate + 8 * 60 * 60 * 1000).toISOString();
+        dueDate = getDateTimeString(new Date(new Date(dueDate).getTime() + (8) * 60 * 60 * 1000));
         const dueDateOnly = dueDate ? dueDate.split('T')[0] : null;
         const completionDateOnly = completionDate ? completionDate.split('T')[0] : null;
+        console.log(dueDate,dueDateOnly,completionDate,completionDateOnly,"zby")
 
         if (!dueDateOnly || !completionDateOnly) {
             return 'on_time'; // 如果没有到期日期，认为准时完成

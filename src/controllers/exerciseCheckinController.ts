@@ -5,7 +5,7 @@ import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
 import { commonChat } from "./aiController.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
-import { getCurrentTimeString } from '../util/dateTime.js';
+import { getCurrentDateTimeString } from '../util/dateTime.js';
 
 // 验证运动时间合理性
 function validateExerciseTime(startTime: string, endTime: string): { valid: boolean; message: string } {
@@ -232,7 +232,7 @@ async function getExerciseRecords(req: Request, res: Response): Promise<Response
 
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取运动记录成功' : '今天还没有运动记录'
         };
         return sendResult(res, result);
@@ -434,7 +434,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             records: rows as any[],
             exercise_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.duration_min || 0), 0),
             exercise_calories_burned: (rows as any[]).reduce((sum, record) => sum + (record.calories_burned || 0), 0),
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return result;
@@ -462,7 +462,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         );
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);

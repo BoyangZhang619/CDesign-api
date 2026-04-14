@@ -5,20 +5,24 @@
 
 /**
  * 获取当前东八区时间的 ISO 字符串格式
- * @returns 格式为 "YYYY-MM-DD HH:mm:ss" 的时间字符串
+ * @returns 格式为 "YYYY-MM-DDTHH:mm:ss" 的时间字符串
  */
 const timeZone = 8; // 东八区时区偏移（小时）
 
-export function getCurrentTimeString(): string {
-    return getTimeString(new Date());
+export function getCurrentDateTimeString(date: Date | null = null): string {
+    return getDateTimeString(date);
 }
 
 /**
  * 获取当前东八区日期（YYYY-MM-DD 格式）
  * @returns 格式为 "YYYY-MM-DD" 的日期字符串
  */
-export function getCurrentDateString(): string {
-    return getDateString(new Date());
+export function getCurrentDateString(date: Date | null = null): string {
+    return getDateString(date);
+}
+
+export function getCurrentTimeString(date: Date | null = null): string {
+    return getTimeString(date);
 }
 
 /**
@@ -26,17 +30,26 @@ export function getCurrentDateString(): string {
  * @param date Date 对象
  * @returns 格式为 "YYYY-MM-DD HH:mm:ss" 的时间字符串
  */
-export function getTimeString(date: Date): string {
+export function getDateTimeString(date: Date | null = null): string {
     // 转换为东八区时间
-    const utc8Date = new Date(date.getTime() + timeZone * 60 * 60 * 1000);
+    const utc8Date = new Date(date? date.getTime() : Date.now() + timeZone * 60 * 60 * 1000);
     const year = utc8Date.getUTCFullYear();
     const month = String(utc8Date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(utc8Date.getUTCDate()).padStart(2, '0');
     const hours = String(utc8Date.getUTCHours()).padStart(2, '0');
     const minutes = String(utc8Date.getUTCMinutes()).padStart(2, '0');
     const seconds = String(utc8Date.getUTCSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+export function getTimeString(date: Date | null = null): string {
+    // 转换为东八区时间
+    const utc8Date = new Date(date? date.getTime() : Date.now() + timeZone * 60 * 60 * 1000);
+    const hours = String(utc8Date.getUTCHours()).padStart(2, '0');
+    const minutes = String(utc8Date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(utc8Date.getUTCSeconds()).padStart(2, '0');
+
+    return `${hours}:${minutes}:${seconds}`;
 }
 
 /**
@@ -44,9 +57,9 @@ export function getTimeString(date: Date): string {
  * @param date Date 对象
  * @returns 格式为 "YYYY-MM-DD" 的日期字符串
  */
-export function getDateString(date: Date): string {
+export function getDateString(date: Date | null = null): string {
     // 转换为东八区时间
-    const utc8Date = new Date(date.getTime() + timeZone * 60 * 60 * 1000);
+    const utc8Date = new Date(date ? date.getTime() : Date.now() + timeZone * 60 * 60 * 1000);
     const year = utc8Date.getUTCFullYear();
     const month = String(utc8Date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(utc8Date.getUTCDate()).padStart(2, '0');
@@ -78,7 +91,7 @@ export function getSQLCurrentDateTime(): string {
  * @returns 格式为 "YYYY-MM-DD HH:mm:ss" 的字符串
  */
 export function toMySQLDateTime(date: Date = new Date()): string {
-    return getTimeString(date);
+    return getDateTimeString(date);
 }
 
 /**
@@ -118,5 +131,5 @@ export function formatDateTime(date: Date | string): string {
     if (typeof date === 'string') {
         return date; // 已经是字符串格式，直接返回
     }
-    return getTimeString(date);
+    return getDateTimeString(date);
 }

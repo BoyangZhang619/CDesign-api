@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import pool from '../config/db.js';
 import { getUserIdFromReq } from './sharedMethods.js';
 import { sendError, sendResult } from '../util/response.js';
-import { getCurrentTimeString } from '../util/dateTime.js';
+import { getCurrentDateTimeString } from '../util/dateTime.js';
 
 interface HistoryQueryParams {
     type?: string; // 'meal' | 'exercise' | 'sleep' | '' (empty for all)
@@ -110,7 +110,7 @@ async function getHistoryRecords(
             ...r,
             type: recordType,
             // 标准化时间字段为 created_at
-            created_at: r.created_at || r.start_time || r.sleep_start_time || r.meal_time || getCurrentTimeString()
+            created_at: r.created_at || r.start_time || r.sleep_start_time || r.meal_time || getCurrentDateTimeString()
         }));
         
         records.push(...withType);

@@ -2,6 +2,7 @@ import pool from "../config/db.js";
 import { sendError, sendResult } from "../util/response.js";
 import { Request, Response } from "express";
 import { getUserIdFromReq } from "./sharedMethods.js";
+import { getCurrentDateTimeString } from "../util/dateTime.js";
 
 // 验证头像大小
 function validateAvatarSize(size: number): boolean {
@@ -88,7 +89,7 @@ async function createAvatar(req: Request, res: Response): Promise<Response> {
                 user_id: userId,
                 avatar_size,
                 is_current,
-                created_at: new Date().toISOString()
+                created_at: getCurrentDateTimeString()
             }
         });
     } catch (error) {

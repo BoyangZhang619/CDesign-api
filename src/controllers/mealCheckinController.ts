@@ -6,7 +6,7 @@ import { QueryResult } from "mysql2";
 import { commonChat } from "./aiController.js";
 import { getUserIdFromReq, getUserById } from "./sharedMethods.js";
 import { get } from "http";
-import { getCurrentTimeString } from '../util/dateTime.js';
+import { getCurrentDateTimeString } from '../util/dateTime.js';
 
 // 插入新的当前日期的打卡记录
 async function insertCheckInRecord(req: Request, res: Response): Promise<Response> {
@@ -166,7 +166,7 @@ async function getCheckInRecords(req: Request, res: Response): Promise<Response>
         );
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return sendResult(res, result);
@@ -195,7 +195,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             meal_fiber: (rows as any[]).reduce((sum, record) => sum + (record.fiber_g || 0), 0),
             meal_sugar: (rows as any[]).reduce((sum, record) => sum + (record.sugar_g || 0), 0),
             meal_water: (rows as any[]).reduce((sum, record) => sum + (record.water_g || 0), 0),
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return result;
@@ -223,7 +223,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         );
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);
@@ -309,7 +309,7 @@ async function getCheckInRecordsWithPagination(req: Request, res: Response): Pro
 
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : isToday ? '今天还没有打卡记录' : '没有找到打卡记录'
         };
         return sendResult(res, result);

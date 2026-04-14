@@ -5,7 +5,7 @@ import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
 import { commonChat } from "./aiController.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
-import { getCurrentTimeString } from '../util/dateTime.js';
+import { getCurrentDateTimeString } from '../util/dateTime.js';
 
 // 计算睡眠时长（小时）
 function calculateSleepDuration(sleepStartTime: string, wakeUpTime: string): number {
@@ -215,7 +215,7 @@ async function getSleepRecords(req: Request, res: Response): Promise<Response> {
 
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取睡眠记录成功' : '今天还没有睡眠记录'
         };
         return sendResult(res, result);
@@ -382,7 +382,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             sleep_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.sleep_duration_hours || 0), 0),
             sleep_start_time: (rows as any[]).reduce((sum, record) => sum + (record.start_time || 0), 0),
             sleep_wakeup_times: (rows as any[]).reduce((sum, record) => sum + (record.wake_up_times || 0), 0),
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };
         return result;
@@ -410,7 +410,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         );
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);

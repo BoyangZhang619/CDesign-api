@@ -7,7 +7,7 @@ import { commonChat } from './aiController.js';
 import { getSummaryResult as getMealSummaryResult } from './mealCheckinController.js';
 import { getSummaryResult as getSleepSummaryResult } from './sleepCheckinController.js';
 import { getSummaryResult as getExerciseSummaryResult } from './exerciseCheckinController.js';
-import { getCurrentTimeString,getCurrentDateString } from '../util/dateTime.js';
+import { getCurrentDateTimeString,getCurrentDateString } from '../util/dateTime.js';
 
 // 返回基本信息
 function getBasicInfo(req: Request): any[] {
@@ -224,7 +224,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
         // 同步处理AI生成，异步返回
         const result = {
             records: rows as any[],
-            checkin_date: getCurrentTimeString().split('T')[0],
+            checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取AI分析总结成功' : '今天还没有AI分析总结'
         };
         return sendResult(res, result);

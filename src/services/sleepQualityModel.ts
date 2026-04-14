@@ -7,6 +7,7 @@ import * as ort from "onnxruntime-node";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { getCurrentDateTimeString } from "../util/dateTime.js";
 
 // 获取当前文件目录
 const __filename = fileURLToPath(import.meta.url);
@@ -169,7 +170,7 @@ class SleepQualityModel {
                 prediction: predictionValue,
                 confidence,
                 features: input,
-                timestamp: new Date().toISOString(),
+                timestamp: getCurrentDateTimeString(),
             };
         } catch (error) {
             console.error("预测失败:", error);

@@ -16,6 +16,7 @@ import type {
   SleepQualityStatus,
   Priority
 } from '../types/portrait.js';
+import { getCurrentDateTimeString } from '../util/dateTime.js';
 
 export class PortraitService {
   /**
@@ -377,7 +378,7 @@ export class PortraitService {
 
       return {
         completed: status.isCompleted,
-        lastUpdated: status.completedAt?.toISOString()
+        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt))
       };
     } catch (error) {
       console.error('[PortraitService.getSetupStatus] 错误:', error);
@@ -410,7 +411,7 @@ export class PortraitService {
 
       return {
         completed: status.isCompleted,
-        lastUpdated: status.completedAt?.toISOString()
+        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt))
       };
     } catch (error) {
       console.error('[PortraitService.updateSetupStatus] 错误:', error);
