@@ -7,6 +7,7 @@ import authMiddleware from '../middlewares/authMiddleware.js';
 import { 
     getTasks,
     getTaskStats,
+    getTasksByDate,
     createTask,
     getTask,
     updateTask,
@@ -28,6 +29,9 @@ router.get('/', getTasks);
 
 // 获取任务统计信息
 router.get('/stats', getTaskStats);
+
+// 获取指定日期的任务
+router.get('/date/:dateStr', getTasksByDate);
 
 // 创建任务
 router.post('/', createTask);

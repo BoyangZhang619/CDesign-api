@@ -281,10 +281,33 @@ async function rejectSuggestion(req: Request, res: Response): Promise<void> {
     }
 }
 
+/**
+ * 获取指定日期的任务（用于月度视图）
+ * GET /api/tasks/date/:dateStr
+ */
+async function getTasksByDate(req: Request, res: Response): Promise<void> {
+    try {
+        const userId = getUserIdFromReq(req);
+        const dateStr = req.params.dateStr as string;
+
+        console.log(`🔍 [getTasksByDate 控制器] 获取 ${dateStr} 的任务, userId=${userId}`);
+
+        const tasks = await TodoListService.getTasksByDate(userId, dateStr);
+
+        console.log(`🎯 [getTasksByDate 控制器] 返回 ${tasks.length} 条任务`);
+
+        sendResult(res, { data: tasks });
+    } catch (error) {
+        console.error('❌ [getTasksByDate 控制器] 错误:', error);
+        sendError(res, String(error instanceof Error ? error.message : error));
+    }
+}
+
 export {
     getTasks,
     getTask,
     getTaskStats,
+    getTasksByDate,
     createTask,
     updateTask,
     deleteTask,

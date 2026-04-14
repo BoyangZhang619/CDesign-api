@@ -281,6 +281,107 @@ export class TodoListDAL {
     }
 
     /**
+     * 获取指定日期的任务（用于月度视图）
+     * 1. 先获取所有 status = 'pending' 的行
+     * 2. 根据 date_type 筛选：
+     *    - tomorrow: 过滤 due_date 为 dateStr - 1 天的任务（前一天设置的明天任务）
+     *    - everyday: 保留所有日期的 everyday 任务
+     *    - workday: 如果 dateStr 是工作日，则保留该类型任务
+     *    - weekend: 如果 dateStr 是周末，则保留该类型任务
+     * 3. 检查非 tomorrow 类型的循环任务是否已在该日完成
+     */
+    static async getUserCertainDayTasks(userId: number, dateStr: string): Promise<Task[]> {
+        console.log(`📅 getUserCertainDayTasks: userId=${userId}, dateStr=${dateStr}`);
+        
+        // 检查 dateStr 是否为工作日或周末
+        const targetDate = new Date(dateStr);
+        const dayOfWeek = targetDate.getDay(); // 0=周日, 1-5=周一到周五, 6=周六
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // 工作日
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 周末
+        
+        // 计算前一天
+        const prevDate = new Date(dateStr);
+        prevDate.setDate(prevDate.getDate() - 1);
+        const prevDateStr = this.formatDate(prevDate);
+        
+        console.log(`📅 分析日期 ${dateStr}: dayOfWeek=${dayOfWeek}, isWeekday=${isWeekday}, isWeekend=${isWeekend}, prevDateStr=${prevDateStr}`);
+        
+        // 第一步：获取所有 pending 任务
+        const query = `
+            SELECT * FROM tasks 
+            WHERE user_id = ? AND status = 'pending'
+            ORDER BY priority = 'high' DESC, priority = 'medium' DESC, created_at DESC
+        `;
+        
+        const [allPendingTasks] = await pool.query(query, [userId]) as any;
+        console.log(`📊 获取到 ${allPendingTasks.length} 个 pending 任务`);
+        
+        // 第二步：根据 date_type 筛选
+        const filteredTasks: Task[] = [];
+        
+        for (const task of allPendingTasks) {
+            const dateType = task.date_type || 'tomorrow';
+            
+            if (dateType === 'tomorrow') {
+                // tomorrow 类型：检查 due_date 是否为前一天（前一天的明天 = 今天）
+                if (task.due_date === prevDateStr) {
+                    filteredTasks.push(task);
+                    console.log(`✅ 任务 ${task.id} (tomorrow类型) 符合条件: due_date=${task.due_date} 是 ${dateStr} 的前一天`);
+                }
+            } else if (dateType === 'everyday') {
+                // everyday 类型：保留所有
+                filteredTasks.push(task);
+                console.log(`✅ 任务 ${task.id} (everyday类型) 符合条件`);
+            } else if (dateType === 'workday') {
+                // workday 类型：只在工作日保留
+                if (isWeekday) {
+                    filteredTasks.push(task);
+                    console.log(`✅ 任务 ${task.id} (workday类型) 符合条件: ${dateStr} 是工作日`);
+                } else {
+                    console.log(`❌ 任务 ${task.id} (workday类型) 不符合: ${dateStr} 不是工作日`);
+                }
+            } else if (dateType === 'weekend') {
+                // weekend 类型：只在周末保留
+                if (isWeekend) {
+                    filteredTasks.push(task);
+                    console.log(`✅ 任务 ${task.id} (weekend类型) 符合条件: ${dateStr} 是周末`);
+                } else {
+                    console.log(`❌ 任务 ${task.id} (weekend类型) 不符合: ${dateStr} 不是周末`);
+                }
+            }
+        }
+        
+        console.log(`📋 筛选后得到 ${filteredTasks.length} 个任务`);
+        
+        // 第三步：检查非 tomorrow 类型的循环任务是否已在该日完成
+        const processedTasks: Task[] = [];
+        
+        for (const task of filteredTasks) {
+            const dateType = task.date_type || 'tomorrow';
+            
+            if (dateType !== 'tomorrow') {
+                // 检查该日是否有完成记录
+                const checkQuery = `
+                    SELECT COUNT(*) as count FROM task_completion_records 
+                    WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
+                `;
+                const [checkResult] = await pool.query(checkQuery, [task.id, userId, dateStr]) as any;
+                
+                if (checkResult[0].count > 0) {
+                    // 该日已完成，标记为已完成
+                    (task as any).status = 'completed';
+                    console.log(`✅ 任务 ${task.id} 在 ${dateStr} 已完成`);
+                }
+            }
+            
+            processedTasks.push(task);
+        }
+        
+        console.log(`✅ 最终返回 ${processedTasks.length} 个任务`);
+        return processedTasks;
+    }
+
+    /**
      * 更新任务
      */
     static async updateTask(userId: number, taskId: number, updateData: UpdateTaskRequest): Promise<Task | null> {

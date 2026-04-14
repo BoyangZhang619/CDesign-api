@@ -62,7 +62,7 @@ app.use('/api/tasks', (req, res, next) => {
 });
 
 // app.use('/', rateLimit({ windowMs: 60000, max: 60 })); // 全局速率限制，每分钟每个IP最多60次请求
-// app.use('/api', rateLimit({ windowMs: 60000, max: 20 })); // /api路径下的速率限制，每分钟每个IP最多20次请求
+// app.use('/api', rateLimit({ windowMs: 60000, max: 60 })); // /api路径下的速率限制，每分钟每个IP最多60次请求
 app.use('/api/auth', authRoutes);
 app.use('/api/character-avatar', characterAvatarRouters);
 app.use('/api/ai', aiRoutes);
