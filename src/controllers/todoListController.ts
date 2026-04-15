@@ -282,6 +282,27 @@ async function rejectSuggestion(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * 获取用户的所有任务（不做任何筛选）
+ * GET /api/tasks/all
+ */
+async function getAllTasks(req: Request, res: Response): Promise<void> {
+    try {
+        const userId = getUserIdFromReq(req);
+
+        console.log(`🔍 [getAllTasks 控制器] 获取所有任务, userId=${userId}`);
+
+        const tasks = await TodoListService.getAllUserTasks(userId);
+
+        console.log(`🎯 [getAllTasks 控制器] 返回 ${tasks.length} 条任务`);
+
+        sendResult(res, { data: tasks });
+    } catch (error) {
+        console.error('❌ [getAllTasks 控制器] 错误:', error);
+        sendError(res, String(error instanceof Error ? error.message : error));
+    }
+}
+
+/**
  * 获取指定日期的任务（用于月度视图）
  * GET /api/tasks/date/:dateStr
  */
@@ -307,6 +328,7 @@ export {
     getTasks,
     getTask,
     getTaskStats,
+    getAllTasks,
     getTasksByDate,
     createTask,
     updateTask,

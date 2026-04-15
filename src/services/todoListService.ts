@@ -57,6 +57,16 @@ export class TodoListService {
   }
 
   /**
+   * 获取用户的所有任务（纯查询，不做任何筛选）
+   */
+  static async getAllUserTasks(userId: number): Promise<Task[]> {
+    console.log(`📝 [TodoListService.getAllUserTasks] 接收参数: userId=${userId}`);
+    const tasks = await TodoListDAL.getAllUserTasks(userId);
+    console.log(`✅ [TodoListService.getAllUserTasks] 返回 ${tasks.length} 条任务`);
+    return tasks;
+  }
+
+  /**
    * 获取指定日期的任务（用于月度视图）
    */
   static async getTasksByDate(userId: number, dateStr: string): Promise<Task[]> {

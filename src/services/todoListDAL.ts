@@ -18,6 +18,23 @@ import type {
     TaskQueryParams
 } from '../types/todolist.js';
 
+export function isTimeFit(dateType: string, dateStr: string): boolean {
+    const now = new Date(getCurrentDateString());
+    const targetDate = new Date(dateStr);
+    if (dateType === 'weekend') {
+        const cntDay = targetDate.getDay();
+        if (cntDay !== 0 && cntDay !== 6) {
+            return false;
+        }
+    } else if (dateType === 'workday') {
+        const cntDay = targetDate.getDay();
+        if (cntDay === 0 || cntDay === 6) {
+            return false;
+        }
+    }
+    return true;
+}
+
 export class TodoListDAL {
     /**
      * 计算任务的 due_date 基于 date_type
@@ -71,7 +88,7 @@ export class TodoListDAL {
     static async createTask(userId: number, taskData: CreateTaskRequest): Promise<Task> {
         // 计算 due_date
         const calculatedDueDate = this.calculateDueDate(taskData.date_type || 'tomorrow');
-        
+
         // "tomorrow" 类型时，设置 due_time 为次日（24:00 表示次日00:00）
         let dueTime = taskData.due_time || null;
         if ((taskData.date_type || 'tomorrow') === 'tomorrow' && !dueTime) {
@@ -121,14 +138,14 @@ export class TodoListDAL {
         console.log('Fetching task with ID:', taskId, 'for user ID:', userId);
         const query = 'SELECT * FROM tasks WHERE id = ? AND user_id = ?';
         const [rows] = await pool.query(query, [taskId, userId]) as any;
-        
+
         if (!rows[0]) {
             return null;
         }
 
         const task = rows[0];
         const dateType = task.date_type || 'tomorrow';
-        
+
         // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
         if (dateType !== 'tomorrow') {
             const today = getCurrentDateString();
@@ -137,21 +154,21 @@ export class TodoListDAL {
                 WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
             `;
             const [checkResult] = await pool.query(checkQuery, [taskId, userId, today]) as any;
-            
+
             if (checkResult[0].count > 0) {
                 // 今天已有完成记录，标记为已完成
                 task.status = 'completed';
                 console.log(`✅ 任务 ${taskId} 今天已完成过，设置 status = 'completed'`);
             }
         }
-        
+
         return task;
     }
 
     /**
      * 获取用户任务列表 - 智能过滤
      * 默认返回当天应该显示的任务：
-     * 1. 当天期限的非"tomorrow"类型任务
+     * 1. 当天期限的非"tomorrow"类型任务（排除已在该日完成的）
      * 2. 当天期限的"tomorrow"类型任务
      * 3. 逾期的"tomorrow"类型任务
      */
@@ -160,18 +177,20 @@ export class TodoListDAL {
         const offset = (page - 1) * limit;
 
         // 如果没有指定日期，使用当前东八区日期（重要：修复时区问题）
-        const queryDate = date || getCurrentDateString();
-        
+        // const queryDate = date || getCurrentDateString();
+        let queryDate = date || null;
+
         // 诊断：检查该用户是否有任何任务
         const diagnosticQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ?';
         const [diagnosticResult] = await pool.query(diagnosticQuery, [userId]) as any;
         console.log(`🔍 [诊断] 用户 ${userId} 在数据库中的总任务数: ${diagnosticResult[0].total}`);
-        
+
         // 诊断：检查该日期的任务
-        const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? AND due_date = ?';
+        const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? ' + (queryDate ? 'AND due_date = ?' : '');
+
         const [dateCheckResult] = await pool.query(dateCheckQuery, [userId, queryDate]) as any;
-        console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total}`);
-        
+        console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total},dateCheckQuery:${dateCheckQuery},`);
+
         // 诊断：打印所有任务
         const allTasksQuery = 'SELECT id, user_id, title, due_date, status FROM tasks WHERE user_id = ? LIMIT 10';
         const [allTasks] = await pool.query(allTasksQuery, [userId]) as any;
@@ -185,7 +204,7 @@ export class TodoListDAL {
         let dateFilterClause = `
             (
                 -- 条件1: 当天期限的所有任务（不管完成没完成）
-                (due_date = ?)
+                (date_type != 'tomorrow')
                 OR
                 -- 条件2: 逾期的"tomorrow"类型任务（未完成）
                 (due_date < ? AND date_type = 'tomorrow' AND status != 'completed')
@@ -193,7 +212,7 @@ export class TodoListDAL {
         `;
 
         whereClause += ' AND ' + dateFilterClause;
-        queryParams.push(queryDate, queryDate);
+        queryParams.push(queryDate);
 
         if (status) {
             whereClause += ' AND status = ?';
@@ -245,39 +264,62 @@ export class TodoListDAL {
             limit,
             userId
         });
-        
+
         console.log('📊 SQL 查询语句:', dataQuery);
         console.log('📊 SQL 参数:', finalParams);
 
         const [rows] = await pool.query(dataQuery, finalParams) as any || [];
-        
+
         console.log(`✅ 查询结果: 返回 ${rows.length} 条记录，总数: ${total}`);
         console.log('📝 任务数据:', rows);
-        
-        // 对于非"tomorrow"类型的循环任务，检查今天是否有完成记录
-        const today = queryDate;
+
+        // 对于非"tomorrow"类型的循环任务，检查是否在请求日期已完成
+        // 如果已完成，则排除该任务（不包含在返回数据中）
         const processedRows = [];
-        
+
         for (const task of rows) {
             const dateType = task.date_type || 'tomorrow';
             if (dateType !== 'tomorrow') {
+                // 非 tomorrow 类型的循环任务需要检查该日是否有完成记录
+                if (!queryDate) {
+                    // 如果没有指定查询日期，使用当前东八区日期（重要：修复时区问题）
+                    queryDate = getCurrentDateString();
+                }
+                if (!isTimeFit(dateType, queryDate)) {
+                        console.log(`⏭️ 任务 ${task.id} 的 date_type 是 ${dateType}，但查询日期 ${queryDate} 不符合时间条件，设置已完成`);
+                        continue; // 跳过该任务，不加入返回列表
+                }
                 const checkQuery = `
                     SELECT COUNT(*) as count FROM task_completion_records 
                     WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
                 `;
-                const [checkResult] = await pool.query(checkQuery, [task.id, userId, today]) as any;
-                
+                console.log(`🔍 检查任务 ${task.id} 在 ${queryDate} 是否已完成，执行 SQL: ${checkQuery} 参数: [${task.id}, ${userId}, ${queryDate}]`);
+                const [checkResult] = await pool.query(checkQuery, [task.id, userId, queryDate]) as any;
+
                 if (checkResult[0].count > 0) {
-                    // 今天已有完成记录，标记为已完成
+                    // 该日已有完成记录，排除该任务（不加入返回列表）
+                    console.log(`⏭️ 任务 ${task.id} 在 ${queryDate} 已完成，设置已完成`);
                     task.status = 'completed';
-                    console.log(`✅ 任务 ${task.id} 今天已完成过，设置 status = 'completed'`);
                 }
             }
             processedRows.push(task);
         }
-        
+
         console.log(`✅ 获取任务 ${processedRows.length} 条，总计 ${total} 条`);
         return { tasks: processedRows, total: total };
+    }
+
+    /**
+     * 获取用户的所有任务（纯查询，不做任何筛选）
+     */
+    static async getAllUserTasks(userId: number): Promise<Task[]> {
+        console.log(`📋 getAllUserTasks: userId=${userId}`);
+
+        const query = `SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC`;
+        const [rows] = await pool.query(query, [userId]) as any;
+
+        console.log(`✅ 获取所有任务 ${rows.length} 条`);
+        return rows;
     }
 
     /**
@@ -292,41 +334,44 @@ export class TodoListDAL {
      */
     static async getUserCertainDayTasks(userId: number, dateStr: string): Promise<Task[]> {
         console.log(`📅 getUserCertainDayTasks: userId=${userId}, dateStr=${dateStr}`);
-        
+
         // 检查 dateStr 是否为工作日或周末
         const targetDate = new Date(dateStr);
         const dayOfWeek = targetDate.getDay(); // 0=周日, 1-5=周一到周五, 6=周六
         const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // 工作日
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // 周末
-        
+
         // 计算前一天
         const prevDate = new Date(dateStr);
         prevDate.setDate(prevDate.getDate() - 1);
         const prevDateStr = this.formatDate(prevDate);
-        
+
         console.log(`📅 分析日期 ${dateStr}: dayOfWeek=${dayOfWeek}, isWeekday=${isWeekday}, isWeekend=${isWeekend}, prevDateStr=${prevDateStr}`);
-        
+
         // 第一步：获取所有 pending 任务
         const query = `
             SELECT * FROM tasks 
             WHERE user_id = ? AND status = 'pending'
             ORDER BY priority = 'high' DESC, priority = 'medium' DESC, created_at DESC
         `;
-        
+
         const [allPendingTasks] = await pool.query(query, [userId]) as any;
         console.log(`📊 获取到 ${allPendingTasks.length} 个 pending 任务`);
-        
+
         // 第二步：根据 date_type 筛选
         const filteredTasks: Task[] = [];
-        
+
         for (const task of allPendingTasks) {
+            task.due_date = getCurrentDateString(new Date(task.due_date)); // 确保 due_date 是 YYYY-MM-DD 格式
             const dateType = task.date_type || 'tomorrow';
-            
+
             if (dateType === 'tomorrow') {
                 // tomorrow 类型：检查 due_date 是否为前一天（前一天的明天 = 今天）
                 if (task.due_date === prevDateStr) {
                     filteredTasks.push(task);
                     console.log(`✅ 任务 ${task.id} (tomorrow类型) 符合条件: due_date=${task.due_date} 是 ${dateStr} 的前一天`);
+                } else {
+                    console.log(`❌ 任务 ${task.id} (tomorrow类型) 不符合条件: due_date=${task.due_date} 不是 ${dateStr} 的前一天`);
                 }
             } else if (dateType === 'everyday') {
                 // everyday 类型：保留所有
@@ -350,15 +395,15 @@ export class TodoListDAL {
                 }
             }
         }
-        
+
         console.log(`📋 筛选后得到 ${filteredTasks.length} 个任务`);
-        
+
         // 第三步：检查非 tomorrow 类型的循环任务是否已在该日完成
         const processedTasks: Task[] = [];
-        
+
         for (const task of filteredTasks) {
             const dateType = task.date_type || 'tomorrow';
-            
+
             if (dateType !== 'tomorrow') {
                 // 检查该日是否有完成记录
                 const checkQuery = `
@@ -366,17 +411,17 @@ export class TodoListDAL {
                     WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
                 `;
                 const [checkResult] = await pool.query(checkQuery, [task.id, userId, dateStr]) as any;
-                
+
                 if (checkResult[0].count > 0) {
                     // 该日已完成，标记为已完成
                     (task as any).status = 'completed';
                     console.log(`✅ 任务 ${task.id} 在 ${dateStr} 已完成`);
                 }
             }
-            
+
             processedTasks.push(task);
         }
-        
+
         console.log(`✅ 最终返回 ${processedTasks.length} 个任务`);
         return processedTasks;
     }
@@ -544,7 +589,7 @@ export class TodoListDAL {
         }
 
         const dateType = (task as any).date_type || 'tomorrow';
-        
+
         if (dateType === 'tomorrow') {
             // "tomorrow"类型：更新 status 为 pending
             const query = `
@@ -560,7 +605,7 @@ export class TodoListDAL {
             const connection = await pool.getConnection();
             try {
                 await connection.beginTransaction();
-                
+
                 // 1. 删除今天的完成记录
                 const deleteQuery = `
           DELETE FROM task_completion_records 
@@ -568,7 +613,7 @@ export class TodoListDAL {
         `;
                 const [deleteResult] = await connection.query(deleteQuery, [taskId, userId, today]) as any;
                 console.log(`✅ 删除任务 ${taskId} 今天的完成记录，影响行数: ${deleteResult.affectedRows}`);
-                
+
                 // 2. 更新 tasks 表中的 completed_date 为 NULL（清除今天的完成标记）
                 const updateQuery = `
           UPDATE tasks 
@@ -577,7 +622,7 @@ export class TodoListDAL {
         `;
                 await connection.query(updateQuery, [taskId, userId]);
                 console.log(`✅ 清除任务 ${taskId} 的 completed_date`);
-                
+
                 await connection.commit();
                 return deleteResult.affectedRows > 0;
             } catch (error) {
@@ -757,7 +802,7 @@ export class TodoListDAL {
         dueDate = getDateTimeString(new Date(new Date(dueDate).getTime() + (8) * 60 * 60 * 1000));
         const dueDateOnly = dueDate ? dueDate.split('T')[0] : null;
         const completionDateOnly = completionDate ? completionDate.split('T')[0] : null;
-        console.log(dueDate,dueDateOnly,completionDate,completionDateOnly,"zby")
+        console.log(dueDate, dueDateOnly, completionDate, completionDateOnly, "zby")
 
         if (!dueDateOnly || !completionDateOnly) {
             return 'on_time'; // 如果没有到期日期，认为准时完成
