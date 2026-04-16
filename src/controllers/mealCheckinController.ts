@@ -106,6 +106,11 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
                 ]
             );
             console.log(`已更新meal记录 ${mealRecordId} 的营养数据:`, nutritionData);
+
+            // 触发更新饮食总结（异步，不阻塞）
+            updateMealAISummary(userId).catch(err => 
+                console.error('更新饮食AI总结失败:', err)
+            );
         } else {
             console.warn(`无法解析营养数据 (mealRecordId: ${mealRecordId}), AI返回:`, aiResult.content);
         }
@@ -214,6 +219,38 @@ async function getSummary(req: Request, res: Response): Promise<Response> {
     }
 }
 
+/**
+ * 更新当日饮食 AI 总结
+ */
+async function updateMealAISummary(userId: number) {
+    try {
+        // 获取当日所有饮食记录
+        const [rows] = await pool.query(
+            `SELECT * FROM checkin_meal_record 
+             WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())
+             ORDER BY meal_time DESC`,
+            [userId, userId]
+        );
+
+        if ((rows as any[]).length === 0) {
+            return;
+        }
+
+        const summaryData = {
+            records: rows as any[],
+            total_calories: (rows as any[]).reduce((sum, record) => sum + (record.calories || 0), 0),
+            total_protein: (rows as any[]).reduce((sum, record) => sum + (record.protein_g || 0), 0),
+            checkin_date: getCurrentDateTimeString().split('T')[0],
+            message: '饮食打卡已完成'
+        };
+
+        // 调用 calculateAISummary 更新 AI 总结
+        await calculateAISummary(summaryData, userId);
+    } catch (error) {
+        console.error('更新饮食AI总结失败:', error);
+    }
+}
+
 async function getAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
@@ -284,6 +321,61 @@ async function calculateAISummary(summaryData: object,userId: number) {
     }
 }
 
+/**
+ * 获取当日所有类型的 AI 总结（运动、饮食、睡眠、整体）
+ */
+async function getAllDailyAISummary(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const [rows] = await pool.query(
+            `SELECT 
+                id,
+                daily_checkin_id,
+                meal_ai_summary,
+                exercise_ai_summary,
+                sleep_ai_summary,
+                total_ai_summary,
+                is_meal_summary_updated,
+                is_exercise_summary_updated,
+                is_sleep_summary_updated,
+                is_total_summary_updated
+            FROM checkin_ai_summary 
+            WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())`,
+            [userId]
+        );
+
+        if ((rows as any[]).length === 0) {
+            return sendResult(res, {
+                data: null,
+                checkin_date: getCurrentDateTimeString().split('T')[0],
+                message: '今天还没有AI分析总结'
+            });
+        }
+
+        const summary = (rows as any[])[0];
+        return sendResult(res, {
+            data: {
+                id: summary.id,
+                daily_checkin_id: summary.daily_checkin_id,
+                meal_ai_summary: summary.meal_ai_summary,
+                exercise_ai_summary: summary.exercise_ai_summary,
+                sleep_ai_summary: summary.sleep_ai_summary,
+                total_ai_summary: summary.total_ai_summary,
+                updated_flags: {
+                    meal: summary.is_meal_summary_updated === 1,
+                    exercise: summary.is_exercise_summary_updated === 1,
+                    sleep: summary.is_sleep_summary_updated === 1,
+                    total: summary.is_total_summary_updated === 1
+                }
+            },
+            checkin_date: getCurrentDateTimeString().split('T')[0],
+            message: '获取AI分析总结成功'
+        });
+    } catch (error) {
+        return sendError(res, '获取AI分析总结时出错: ' + error);
+    }
+}
+
 // 通过limit 和 offset获取当天打卡记录
 async function getCheckInRecordsWithPagination(req: Request, res: Response): Promise<Response> {
     const todayCheckin = await insertEmptyDailyCheckin(req, res);
@@ -325,5 +417,6 @@ export {
     getCheckInRecordsWithPagination,
     getAISummary,
     getSummary,
-    getSummaryResult
+    getSummaryResult,
+    getAllDailyAISummary
 }

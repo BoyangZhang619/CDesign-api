@@ -6,6 +6,7 @@ import {
     getCheckInRecordsWithPagination,
     getSummary,
     getAISummary,
+    getAllDailyAISummary
 } from "../../controllers/mealCheckinController.js";
 
 const router = Express.Router();
@@ -17,5 +18,6 @@ router.get("/checkin/meal", getCheckInRecords);
 router.get("/checkin/meal/paginated/:limit/:offset", getCheckInRecordsWithPagination);
 router.get("/checkin/meal/summary", getSummary);
 router.get("/checkin/meal/ai-summary", getAISummary);
+router.get("/checkin/meal/ai-summary/all", getAllDailyAISummary);
 
 export default router;

@@ -8,7 +8,8 @@ import {
     getExerciseStatistics,
     getExerciseStatisticsByType,
     getSummary,
-    getAISummary
+    getAISummary,
+    getAllDailyAISummary
 } from "../../controllers/exerciseCheckinController.js";
 
 const router = express.Router();
@@ -38,5 +39,8 @@ router.get("/checkin/exercise/summary", getSummary);
 
 // 获取AI分析总结
 router.get("/checkin/exercise/ai-summary", getAISummary);
+
+// 获取所有AI总结（包含所有维度）
+router.get("/checkin/exercise/ai-summary/all", getAllDailyAISummary);
 
 export default router;

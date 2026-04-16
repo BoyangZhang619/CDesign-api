@@ -173,6 +173,11 @@ async function generateExerciseAnalysisAsync(
                 ]
             );
             console.log(`已更新exercise记录 ${exerciseRecordId} 的AI分析数据:`, analysisData);
+
+            // 触发更新运动总结（异步，不阻塞）
+            updateExerciseAISummary(userId).catch(err => 
+                console.error('更新运动AI总结失败:', err)
+            );
         } else {
             console.warn(`无法解析运动分析数据 (exerciseRecordId: ${exerciseRecordId}), AI返回:`, aiResult.content);
         }
@@ -453,6 +458,38 @@ async function getSummary(req: Request, res: Response): Promise<Response> {
     }
 }
 
+/**
+ * 更新当日运动 AI 总结
+ */
+async function updateExerciseAISummary(userId: number) {
+    try {
+        // 获取当日所有运动记录
+        const [rows] = await pool.query(
+            `SELECT * FROM checkin_exercise_record 
+             WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())
+             ORDER BY created_at DESC`,
+            [userId, userId]
+        );
+
+        if ((rows as any[]).length === 0) {
+            return;
+        }
+
+        const summaryData = {
+            records: rows as any[],
+            exercise_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.duration_min || 0), 0),
+            exercise_calories_burned: (rows as any[]).reduce((sum, record) => sum + (record.calories_burned || 0), 0),
+            checkin_date: getCurrentDateTimeString().split('T')[0],
+            message: '运动打卡已完成'
+        };
+
+        // 调用 calculateAISummary 更新 AI 总结
+        await calculateAISummary(summaryData, userId);
+    } catch (error) {
+        console.error('更新运动AI总结失败:', error);
+    }
+}
+
 async function getAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
@@ -526,5 +563,61 @@ export {
     getExerciseStatisticsByType,
     getSummary,
     getAISummary,
-    getSummaryResult
+    getSummaryResult,
+    getAllDailyAISummary
+}
+
+/**
+ * 获取当日所有类型的 AI 总结（运动、饮食、睡眠、整体）
+ */
+async function getAllDailyAISummary(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const [rows] = await pool.query(
+            `SELECT 
+                id,
+                daily_checkin_id,
+                meal_ai_summary,
+                exercise_ai_summary,
+                sleep_ai_summary,
+                total_ai_summary,
+                is_meal_summary_updated,
+                is_exercise_summary_updated,
+                is_sleep_summary_updated,
+                is_total_summary_updated
+            FROM checkin_ai_summary 
+            WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())`,
+            [userId]
+        );
+
+        if ((rows as any[]).length === 0) {
+            return sendResult(res, {
+                data: null,
+                checkin_date: getCurrentDateTimeString().split('T')[0],
+                message: '今天还没有AI分析总结'
+            });
+        }
+
+        const summary = (rows as any[])[0];
+        return sendResult(res, {
+            data: {
+                id: summary.id,
+                daily_checkin_id: summary.daily_checkin_id,
+                meal_ai_summary: summary.meal_ai_summary,
+                exercise_ai_summary: summary.exercise_ai_summary,
+                sleep_ai_summary: summary.sleep_ai_summary,
+                total_ai_summary: summary.total_ai_summary,
+                updated_flags: {
+                    meal: summary.is_meal_summary_updated === 1,
+                    exercise: summary.is_exercise_summary_updated === 1,
+                    sleep: summary.is_sleep_summary_updated === 1,
+                    total: summary.is_total_summary_updated === 1
+                }
+            },
+            checkin_date: getCurrentDateTimeString().split('T')[0],
+            message: '获取AI分析总结成功'
+        });
+    } catch (error) {
+        return sendError(res, '获取AI分析总结时出错: ' + error);
+    }
 }
