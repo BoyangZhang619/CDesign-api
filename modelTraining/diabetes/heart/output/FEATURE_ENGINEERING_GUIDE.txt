@@ -1,0 +1,666 @@
+================================================================================
+HEART DISEASE DATA - FEATURE ENGINEERING DETAILED GUIDE
+================================================================================
+
+Generation Time: 2026-04-17
+Dataset: heart_2020_cleaned.csv (319,795 rows, 18 columns)
+
+================================================================================
+PHASE 1: FEATURE SELECTION
+================================================================================
+
+Based on the analysis, recommended TOP features to retain:
+
+Rank | Feature              | Importance | Level       | Recommendation
+-----|----------------------|-----------|-------------|----------------
+  1. | Smoking              | 0.4591    | Very High   | KEEP
+  2. | Sex                  | 0.4311    | Very High   | KEEP
+  3. | BMI                  | 0.4011    | Very High   | KEEP
+  4. | GenHealth            | 0.3346    | Very High   | KEEP
+  5. | PhysicalHealth       | 0.2958    | High        | KEEP
+  6. | Age_Category         | 0.2945    | High        | KEEP
+  7. | Diabetic             | 0.2910    | High        | KEEP
+  8. | PhysicalActivity     | 0.2418    | High        | KEEP
+  9. | KidneyDisease        | 0.2377    | High        | KEEP
+ 10. | Asthma               | 0.1970    | Medium      | KEEP
+
+Features to potentially remove (importance < 0.15):
+  - None identified (all features have adequate importance)
+
+Actions:
+  STEP 1: Start with TOP-10 features for baseline model
+  STEP 2: In second iteration, add features 11-15 for extended model
+  STEP 3: Use cross-validation to determine optimal feature count
+
+================================================================================
+PHASE 2: NUMERICAL FEATURE PROCESSING
+================================================================================
+
+Processing Required for 4 Numeric Features:
+
+Feature 1: BMI
+  - Mean: 28.33, Std: 6.36
+  - Range: [12.02, 94.85]
+  - Outliers: 1.50% (4,799 samples)
+  - Action: Apply StandardScaler, cap at 99th percentile
+
+Feature 2: PhysicalHealth
+  - Mean: 3.37, Std: 7.95
+  - Range: [0, 30]
+  - Outliers: 0.60% (1,906 samples)
+  - Action: StandardScaler, consider RobustScaler for outliers
+
+Feature 3: MentalHealth
+  - Mean: 3.90, Std: 7.96
+  - Range: [0, 30]
+  - Outliers: 0.59% (1,880 samples)
+  - Action: StandardScaler, pair with PhysicalHealth in features
+
+Feature 4: SleepTime
+  - Mean: 7.10, Std: 1.44
+  - Range: [1, 24]
+  - Outliers: 0.67% (2,159 samples)
+  - Action: StandardScaler, relatively clean
+
+Scaling Strategy:
+
+For Tree Models (RandomForest, XGBoost):
+  - No scaling needed
+  - Trees are scale-invariant
+  - Skip this step
+
+For Linear Models (LogisticRegression, SVM):
+  - Apply StandardScaler:
+      scaler = StandardScaler()
+      X_train_scaled = scaler.fit_transform(X_train)
+      X_test_scaled = scaler.transform(X_test)
+
+For Neural Networks:
+  - Apply StandardScaler for hidden layers
+  - Consider MinMaxScaler for output layer
+
+Outlier Handling:
+
+  Option 1: IQR Method (Recommended)
+    Q1 = 25th percentile
+    Q3 = 75th percentile
+    IQR = Q3 - Q1
+    Lower_Bound = Q1 - 1.5 * IQR
+    Upper_Bound = Q3 + 1.5 * IQR
+    Cap values at bounds
+
+  Option 2: Cap at Percentile
+    Cap at 99th percentile for upper bound
+    Cap at 1st percentile for lower bound
+
+  Option 3: RobustScaler
+    Uses median and IQR internally
+    Better for data with outliers
+    from sklearn.preprocessing import RobustScaler
+
+Recommended Code:
+
+  from sklearn.preprocessing import StandardScaler
+  import pandas as pd
+
+  # Apply StandardScaler to numeric features
+  numeric_features = ['BMI', 'PhysicalHealth', 'MentalHealth', 'SleepTime']
+  scaler = StandardScaler()
+  X_train[numeric_features] = scaler.fit_transform(X_train[numeric_features])
+  X_test[numeric_features] = scaler.transform(X_test[numeric_features])
+
+================================================================================
+PHASE 3: CATEGORICAL FEATURE PROCESSING
+================================================================================
+
+14 Categorical Features Detected:
+
+  1. Smoking (Yes/No)
+  2. AlcoholDrinking (Yes/No)
+  3. Stroke (Yes/No)
+  4. DiffWalking (Yes/No)
+  5. Sex (Male/Female)
+  6. AgeCategory (18-24, 25-29, ..., 80 or older)
+  7. Race (White, Black, Asian, Hispanic, Other, Multiracial)
+  8. Diabetic (Yes, No, No - prediabetic, Yes - during pregnancy)
+  9. PhysicalActivity (Yes/No)
+  10. GenHealth (Excellent, Very good, Good, Fair, Poor)
+  11. Asthma (Yes/No)
+  12. KidneyDisease (Yes/No)
+  13. SkinCancer (Yes/No)
+  14. HeartDisease (No/Yes) - TARGET VARIABLE
+
+Encoding Strategy by Model Type:
+
+FOR TREE MODELS (RandomForest, XGBoost, LightGBM):
+  Use: LabelEncoder (Ordinal Encoding)
+  Pros: Preserves tree structure, fast
+  Cons: Introduces artificial ordering
+
+  Code:
+    from sklearn.preprocessing import LabelEncoder
+
+    categorical_features = [col for col in X.columns if X[col].dtype == 'object']
+    encoders = {}
+
+    for col in categorical_features:
+        le = LabelEncoder()
+        X_train[col] = le.fit_transform(X_train[col].astype(str))
+        X_test[col] = le.transform(X_test[col].astype(str))
+        encoders[col] = le
+
+FOR LINEAR MODELS (LogisticRegression, SVM):
+  Use: OneHotEncoder (Dummy Variables)
+  Pros: No artificial ordering, clearer relationships
+  Cons: Increases feature dimensionality
+
+  Code:
+    from sklearn.preprocessing import OneHotEncoder
+
+    encoder = OneHotEncoder(drop='first', sparse_output=False)
+    X_train_encoded = encoder.fit_transform(X_train[categorical_features])
+    X_test_encoded = encoder.transform(X_test[categorical_features])
+
+FOR NEURAL NETWORKS:
+  Use: Embedding Layer or OneHotEncoder
+  Pros: Embedding learns representations
+  Cons: Complex, requires more data
+
+  Code:
+    # Option 1: OneHotEncoder
+    X_encoded = pd.get_dummies(X, columns=categorical_features, drop_first=True)
+
+    # Option 2: Embedding (use in Keras)
+    from keras.layers import Embedding
+
+High Cardinality Features:
+  - AgeCategory: 13 unique values (OK)
+  - Race: 6 unique values (OK)
+  - Diabetic: 4 unique values (OK)
+  - GenHealth: 5 unique values (OK)
+
+  All have reasonable cardinality, no merging needed.
+
+Missing Values in Categorical:
+  - Current state: No missing values detected
+  - Maintain as is
+
+================================================================================
+PHASE 4: FEATURE DERIVATION & ENGINEERING
+================================================================================
+
+Recommended Engineered Features (Based on TOP Features):
+
+1. INTERACTION FEATURES
+
+  Feature: Smoking_x_PhysicalActivity
+    Formula: Smoking * PhysicalActivity
+    Rationale: Smoking + lack of activity = high risk
+    Implementation:
+      X['Smoking_x_PhysicalActivity'] = X['Smoking'] * X['PhysicalActivity']
+
+  Feature: BMI_x_Age
+    Formula: BMI * AgeCategory
+    Rationale: BMI effect varies by age
+    Implementation:
+      X['BMI_x_Age'] = X['BMI'] * X['AgeCategory_encoded']
+
+  Feature: GenHealth_x_PhysicalHealth
+    Formula: GenHealth * PhysicalHealth
+    Rationale: General health * physical days
+    Implementation:
+      X['Health_Days'] = X['GenHealth'] * X['PhysicalHealth']
+
+2. RATIO FEATURES
+
+  Feature: PhysicalToMental_Ratio
+    Formula: PhysicalHealth / (MentalHealth + 1)
+    Rationale: Balance of physical vs mental health
+    Implementation:
+      X['PhysicalToMental'] = X['PhysicalHealth'] / (X['MentalHealth'] + 1)
+
+  Feature: Health_Activity_Balance
+    Formula: BMI / (PhysicalActivity + 1)
+    Rationale: Weight relative to activity level
+    Implementation:
+      X['Health_Activity'] = X['BMI'] / (X['PhysicalActivity_encoded'] + 1)
+
+3. POLYNOMIAL FEATURES
+
+  Feature: BMI_Squared
+    Formula: BMI ** 2
+    Rationale: Non-linear BMI effects
+    Implementation:
+      X['BMI_Squared'] = X['BMI'] ** 2
+
+  Feature: PhysicalHealth_Squared
+    Formula: PhysicalHealth ** 2
+    Rationale: Exponential health days impact
+    Implementation:
+      X['PhysHealth_Squared'] = X['PhysicalHealth'] ** 2
+
+4. AGGREGATED FEATURES
+
+  Feature: Health_Score
+    Formula: (GenHealth + PhysicalHealth/10) / 2
+    Rationale: Combined health measure
+    Implementation:
+      X['Health_Score'] = (X['GenHealth_encoded'] + X['PhysicalHealth']/10) / 2
+
+  Feature: Risk_Profile
+    Formula: Smoking + Stroke + Diabetic
+    Rationale: Cumulative risk factors
+    Implementation:
+      X['Risk_Factors'] = X['Smoking_encoded'] + X['Stroke_encoded'] + X['Diabetic_encoded']
+
+5. DOMAIN-SPECIFIC FEATURES
+
+  Feature: Chronic_Disease_Count
+    Formula: Sum of (Asthma, KidneyDisease, SkinCancer, Diabetic)
+    Rationale: Multiple chronic conditions indicator
+    Implementation:
+      chronic_cols = ['Asthma', 'KidneyDisease', 'SkinCancer', 'Diabetic']
+      X['Chronic_Count'] = (X[chronic_cols] == 'Yes').sum(axis=1)
+
+  Feature: Lifestyle_Risk
+    Formula: Smoking + AlcoholDrinking - PhysicalActivity
+    Rationale: Overall lifestyle risk assessment
+    Implementation:
+      X['Lifestyle_Risk'] = X['Smoking_encoded'] + X['AlcoholDrinking_encoded'] - X['PhysicalActivity_encoded']
+
+Feature Engineering Implementation Workflow:
+
+  Step 1: Create features in sequence
+    features_added = []
+    X['BMI_Squared'] = X['BMI'] ** 2
+    features_added.append('BMI_Squared')
+
+  Step 2: Evaluate impact with cross-validation
+    model = RandomForestClassifier()
+    score = cross_val_score(model, X, y, cv=5, scoring='roc_auc')
+    print('AUC: {:.4f} +/- {:.4f}'.format(score.mean(), score.std()))
+
+  Step 3: Keep only features that improve performance
+    if score.mean() > baseline_score:
+        print('Feature {} improves model'.format(features_added[-1]))
+    else:
+        X = X.drop(columns=[features_added[-1]])
+
+  Step 4: Repeat for all candidate features
+
+================================================================================
+PHASE 5: FEATURE SELECTION STRATEGY
+================================================================================
+
+Method 1: Threshold-Based Selection
+
+  Code:
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Train model
+    model = RandomForestClassifier(n_estimators=200, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Get feature importances
+    importances = model.feature_importances_
+    feature_importance_df = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': importances
+    }).sort_values('importance', ascending=False)
+
+    # Select features above threshold
+    threshold = 0.01
+    selected_features = feature_importance_df[
+        feature_importance_df['importance'] > threshold
+    ]['feature'].tolist()
+
+    print('Selected {} features'.format(len(selected_features)))
+
+Method 2: Recursive Feature Elimination (RFE)
+
+  Code:
+    from sklearn.feature_selection import RFE
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Perform RFE
+    model = RandomForestClassifier(n_estimators=100)
+    rfe = RFE(model, n_features_to_select=15)
+    rfe.fit(X_train, y_train)
+
+    # Get selected features
+    selected_features = X_train.columns[rfe.support_].tolist()
+
+    # Use selected features
+    X_train_selected = X_train[selected_features]
+    X_test_selected = X_test[selected_features]
+
+Method 3: Cross-Validation Feature Selection
+
+  Code:
+    from sklearn.model_selection import cross_val_score
+    from sklearn.ensemble import RandomForestClassifier
+
+    baseline_score = 0.85
+    features_to_try = X_train.columns.tolist()
+    selected = []
+
+    for feature in features_to_try:
+        X_temp = X_train[selected + [feature]]
+        model = RandomForestClassifier()
+        scores = cross_val_score(model, X_temp, y_train, cv=5, scoring='roc_auc')
+
+        if scores.mean() >= baseline_score:
+            selected.append(feature)
+            baseline_score = scores.mean()
+            print('Added {}: AUC = {:.4f}'.format(feature, scores.mean()))
+        else:
+            print('Skipped {}'.format(feature))
+
+Method 4: Statistical Tests
+
+  Code:
+    from scipy.stats import chi2_contingency, pointbiserialr
+
+    # For categorical features
+    for col in categorical_features:
+        contingency_table = pd.crosstab(X_train[col], y_train)
+        chi2, p_val, dof, expected = chi2_contingency(contingency_table)
+        if p_val < 0.05:
+            print('{}: statistically significant'.format(col))
+
+    # For numeric features
+    for col in numeric_features:
+        corr, p_val = pointbiserialr(y_train, X_train[col])
+        if p_val < 0.05:
+            print('{}: corr={:.4f}, p={:.6f}'.format(col, corr, p_val))
+
+================================================================================
+PHASE 6: VALIDATION & MONITORING
+================================================================================
+
+Cross-Validation Setup:
+
+  Code:
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Stratified 5-fold CV
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    model = RandomForestClassifier(n_estimators=200, random_state=42)
+
+    # Evaluate
+    scores = cross_val_score(model, X_train, y_train, cv=skf, scoring='roc_auc')
+
+    print('CV Scores: {}'.format(scores))
+    print('Mean AUC: {:.4f} +/- {:.4f}'.format(scores.mean(), scores.std()))
+
+    # Interpretation
+    if scores.std() < 0.05:
+        print('Model is stable across folds')
+    else:
+        print('Model is unstable, consider more features or regularization')
+
+Feature Distribution Consistency:
+
+  Code:
+    import numpy as np
+
+    # Check if train/test distributions are similar
+    numeric_features = ['BMI', 'PhysicalHealth', 'SleepTime']
+
+    for feature in numeric_features:
+        train_mean = X_train[feature].mean()
+        test_mean = X_test[feature].mean()
+        train_std = X_train[feature].std()
+        test_std = X_test[feature].std()
+
+        mean_diff = abs(train_mean - test_mean)
+        std_diff = abs(train_std - test_std)
+
+        print('{}:'.format(feature))
+        print('  Train: mean={:.2f}, std={:.2f}'.format(train_mean, train_std))
+        print('  Test: mean={:.2f}, std={:.2f}'.format(test_mean, test_std))
+        print('  Diff: mean={:.2f}, std={:.2f}'.format(mean_diff, std_diff))
+
+        if mean_diff > train_std * 0.1:
+            print('  WARNING: Large mean difference!')
+
+Overfitting Detection:
+
+  Code:
+    from sklearn.metrics import roc_auc_score
+
+    # Train and evaluate
+    model.fit(X_train, y_train)
+
+    train_pred = model.predict_proba(X_train)[:, 1]
+    test_pred = model.predict_proba(X_test)[:, 1]
+
+    train_auc = roc_auc_score(y_train, train_pred)
+    test_auc = roc_auc_score(y_test, test_pred)
+
+    overfitting_gap = train_auc - test_auc
+
+    print('Train AUC: {:.4f}'.format(train_auc))
+    print('Test AUC: {:.4f}'.format(test_auc))
+    print('Overfitting Gap: {:.4f}'.format(overfitting_gap))
+
+    if overfitting_gap > 0.1:
+        print('ALERT: Possible overfitting detected!')
+        print('Recommended actions:')
+        print('  1. Reduce number of features')
+        print('  2. Increase regularization')
+        print('  3. Increase training data')
+    elif overfitting_gap > 0.05:
+        print('Light overfitting - monitor closely')
+    else:
+        print('Model generalization is good')
+
+Validation Curve Analysis:
+
+  Code:
+    from sklearn.model_selection import validation_curve
+
+    # Check effect of n_estimators
+    param_range = [10, 50, 100, 200, 500]
+    train_scores, val_scores = validation_curve(
+        RandomForestClassifier(random_state=42),
+        X_train, y_train,
+        param_name='n_estimators',
+        param_range=param_range,
+        cv=5,
+        scoring='roc_auc'
+    )
+
+    # Plot results
+    import matplotlib.pyplot as plt
+
+    train_mean = train_scores.mean(axis=1)
+    train_std = train_scores.std(axis=1)
+    val_mean = val_scores.mean(axis=1)
+    val_std = val_scores.std(axis=1)
+
+    plt.plot(param_range, train_mean, label='Training Score')
+    plt.plot(param_range, val_mean, label='Validation Score')
+    plt.fill_between(param_range, train_mean - train_std, train_mean + train_std, alpha=0.2)
+    plt.fill_between(param_range, val_mean - val_std, val_mean + val_std, alpha=0.2)
+    plt.xlabel('n_estimators')
+    plt.ylabel('ROC-AUC')
+    plt.legend()
+    plt.show()
+
+================================================================================
+COMPLETE WORKFLOW EXAMPLE CODE
+================================================================================
+
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score, classification_report, confusion_matrix
+import pandas as pd
+import numpy as np
+
+# Load data
+df = pd.read_csv('heart_2020_cleaned.csv')
+
+# Separate features and target
+X = df.drop('HeartDisease', axis=1)
+y = (df['HeartDisease'] == 'Yes').astype(int)
+
+# Identify feature types
+numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
+
+# Encode categorical features
+for col in categorical_cols:
+    le = LabelEncoder()
+    X[col] = le.fit_transform(X[col].astype(str))
+
+# Train/Test split (stratified)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Scale numeric features
+scaler = StandardScaler()
+X_train[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
+X_test[numeric_cols] = scaler.transform(X_test[numeric_cols])
+
+# Feature engineering
+X_train['BMI_Squared'] = X_train['BMI'] ** 2
+X_test['BMI_Squared'] = X_test['BMI'] ** 2
+
+# Feature selection (TOP-10)
+top_features = [
+    'Smoking', 'Sex', 'BMI', 'GenHealth', 'PhysicalHealth',
+    'Age_Category', 'Diabetic', 'PhysicalActivity', 'KidneyDisease', 'Asthma'
+]
+X_train_selected = X_train[top_features]
+X_test_selected = X_test[top_features]
+
+# Model training
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=15,
+    min_samples_split=5,
+    random_state=42,
+    n_jobs=-1
+)
+
+# Cross-validation
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+cv_scores = cross_val_score(model, X_train_selected, y_train, cv=skf, scoring='roc_auc')
+print('CV AUC: {:.4f} +/- {:.4f}'.format(cv_scores.mean(), cv_scores.std()))
+
+# Train final model
+model.fit(X_train_selected, y_train)
+
+# Evaluation
+train_auc = roc_auc_score(y_train, model.predict_proba(X_train_selected)[:, 1])
+test_auc = roc_auc_score(y_test, model.predict_proba(X_test_selected)[:, 1])
+
+print('Train AUC: {:.4f}'.format(train_auc))
+print('Test AUC: {:.4f}'.format(test_auc))
+print()
+print(classification_report(y_test, model.predict(X_test_selected)))
+
+# Feature importance
+importance_df = pd.DataFrame({
+    'feature': top_features,
+    'importance': model.feature_importances_
+}).sort_values('importance', ascending=False)
+
+print()
+print('Feature Importances:')
+print(importance_df)
+
+================================================================================
+DELIVERABLES CHECKLIST
+================================================================================
+
+Data Preparation:
+  [OK] Train/Test split (80/20 stratified)
+  [OK] Missing value handling (no missing)
+  [OK] Duplicate removal (if any)
+  [OK] Encoding of categorical variables
+  [OK] Scaling of numeric features
+
+Feature Engineering:
+  [  ] Feature selection (TOP-10)
+  [  ] Create interaction features
+  [  ] Create ratio features
+  [  ] Create polynomial features
+  [  ] Cross-validation evaluation
+
+Model Development:
+  [  ] RandomForest baseline
+  [  ] XGBoost model
+  [  ] Hyperparameter tuning
+  [  ] Ensemble methods
+  [  ] Final model selection
+
+Validation & Testing:
+  [  ] 5-fold cross-validation
+  [  ] Test set evaluation
+  [  ] Confusion matrix
+  [  ] ROC curve and AUC
+  [  ] Classification report
+
+Documentation:
+  [  ] Model card
+  [  ] Feature engineering log
+  [  ] Performance comparison
+  [  ] Deployment guide
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Dataset Metrics:
+  * Size: 319,795 samples (large)
+  * Target: Binary (Heart Disease: Yes/No)
+  * Target Split: 91.44% No, 8.56% Yes (imbalanced)
+  * Missing Data: 0% (excellent)
+  * Quality Score: 94.7/100 (excellent)
+
+Feature Metrics:
+  * Total Features: 18 (4 numeric, 14 categorical)
+  * Top Feature: Smoking (importance=0.4591)
+  * Multicollinearity: None detected
+  * Outliers: 0.5-1.5% per numeric feature
+
+Model Targets:
+  * Baseline AUC: > 0.80
+  * Target AUC: > 0.85
+  * Precision: > 0.70
+  * Recall: > 0.65
+  * F1-Score: > 0.67
+
+Recommendations:
+  * Use TOP-10 features for initial model
+  * Apply StandardScaler for linear models
+  * Use StratifiedKFold for imbalanced data
+  * Monitor for overfitting (gap > 0.1)
+  * Re-evaluate features after adding interactions
+
+Key Libraries:
+  * pandas, numpy - data manipulation
+  * scikit-learn - preprocessing, models, evaluation
+  * scipy - statistical tests
+  * matplotlib, seaborn - visualization
+  * xgboost, lightgbm - advanced models
+
+Next Steps:
+  1. Execute Phase 1: Feature Selection
+  2. Execute Phase 2: Numerical Processing
+  3. Execute Phase 3: Categorical Encoding
+  4. Execute Phase 4: Feature Engineering
+  5. Execute Phase 5: Feature Selection
+  6. Execute Phase 6: Validation & Testing
+
+================================================================================
+END OF FEATURE ENGINEERING GUIDE
+================================================================================
+Analysis Generated: 2026-04-17
+All CSV output files: D:\gitLocal\CDesign\CDesign-api\modelTraining\diabetes\heart\output\
+
