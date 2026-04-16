@@ -1,0 +1,161 @@
+============================================================
+DIABETES DATASET ANALYSIS REPORT
+============================================================
+
+1) DATASET OVERVIEW & QUALITY SCORES
+------------------------------------------------------------
+
+Dataset: diabetes_012
+  Rows: 253680, Columns: 22
+  Missing Ratio: 0.00%, Duplicate Ratio: 9.42%
+  Outlier Ratio: 1.78%
+  QUALITY SCORE: 97.9/100
+
+Dataset: diabetes_binary_5050
+  Rows: 70692, Columns: 22
+  Missing Ratio: 0.00%, Duplicate Ratio: 2.31%
+  Outlier Ratio: 1.58%
+  QUALITY SCORE: 99.4/100
+
+Dataset: diabetes_binary_full
+  Rows: 253680, Columns: 22
+  Missing Ratio: 0.00%, Duplicate Ratio: 9.54%
+  Outlier Ratio: 1.78%
+  QUALITY SCORE: 97.9/100
+
+2) TARGET DISTRIBUTION & CLASS BALANCE
+------------------------------------------------------------
+
+diabetes_012:
+  Class 0.0 →   213703 samples (84.24%)
+  Class 1.0 →     4631 samples ( 1.83%)
+  Class 2.0 →    35346 samples (13.93%)
+
+diabetes_binary_5050:
+  Class 0.0 →    35346 samples (50.00%)
+  Class 1.0 →    35346 samples (50.00%)
+
+diabetes_binary_full:
+  Class 0.0 →   218334 samples (86.07%)
+  Class 1.0 →    35346 samples (13.93%)
+
+3) FEATURE-TARGET CORRELATION (Top 15)
+------------------------------------------------------------
+
+diabetes_012:
+               GenHlth corr= 0.3026 (p=0.00e+00) ***
+                HighBP corr= 0.2716 (p=0.00e+00) ***
+                   BMI corr= 0.2244 (p=0.00e+00) ***
+              DiffWalk corr= 0.2242 (p=0.00e+00) ***
+              HighChol corr= 0.2091 (p=0.00e+00) ***
+                   Age corr= 0.1850 (p=0.00e+00) ***
+  HeartDiseaseorAttack corr= 0.1803 (p=0.00e+00) ***
+              PhysHlth corr= 0.1763 (p=0.00e+00) ***
+                Income corr=-0.1715 (p=0.00e+00) ***
+             Education corr=-0.1305 (p=0.00e+00) ***
+          PhysActivity corr=-0.1219 (p=0.00e+00) ***
+                Stroke corr= 0.1072 (p=0.00e+00) ***
+              MentHlth corr= 0.0735 (p=7.69e-301) ***
+             CholCheck corr= 0.0675 (p=2.92e-254) ***
+                Smoker corr= 0.0629 (p=8.50e-221) ***
+
+diabetes_binary_5050:
+               GenHlth corr= 0.4076 (p=0.00e+00) ***
+                HighBP corr= 0.3815 (p=0.00e+00) ***
+                   BMI corr= 0.2934 (p=0.00e+00) ***
+              HighChol corr= 0.2892 (p=0.00e+00) ***
+                   Age corr= 0.2787 (p=0.00e+00) ***
+              DiffWalk corr= 0.2726 (p=0.00e+00) ***
+                Income corr=-0.2244 (p=0.00e+00) ***
+              PhysHlth corr= 0.2131 (p=0.00e+00) ***
+  HeartDiseaseorAttack corr= 0.2115 (p=0.00e+00) ***
+             Education corr=-0.1705 (p=0.00e+00) ***
+          PhysActivity corr=-0.1587 (p=0.00e+00) ***
+                Stroke corr= 0.1254 (p=9.38e-246) ***
+             CholCheck corr= 0.1154 (p=4.86e-208) ***
+     HvyAlcoholConsump corr=-0.0949 (p=5.85e-141) ***
+              MentHlth corr= 0.0870 (p=6.80e-119) ***
+
+diabetes_binary_full:
+               GenHlth corr= 0.2936 (p=0.00e+00) ***
+                HighBP corr= 0.2631 (p=0.00e+00) ***
+              DiffWalk corr= 0.2183 (p=0.00e+00) ***
+                   BMI corr= 0.2168 (p=0.00e+00) ***
+              HighChol corr= 0.2003 (p=0.00e+00) ***
+                   Age corr= 0.1774 (p=0.00e+00) ***
+  HeartDiseaseorAttack corr= 0.1773 (p=0.00e+00) ***
+              PhysHlth corr= 0.1713 (p=0.00e+00) ***
+                Income corr=-0.1639 (p=0.00e+00) ***
+             Education corr=-0.1245 (p=0.00e+00) ***
+          PhysActivity corr=-0.1181 (p=0.00e+00) ***
+                Stroke corr= 0.1058 (p=0.00e+00) ***
+              MentHlth corr= 0.0693 (p=1.14e-267) ***
+             CholCheck corr= 0.0648 (p=7.51e-234) ***
+                Smoker corr= 0.0608 (p=3.05e-206) ***
+
+4) FEATURE VARIANCE STABILITY (Top 10 unstable)
+------------------------------------------------------------
+
+diabetes_012:
+                Stroke stability_ratio=1.4429, max_class_var=0.0839
+  HeartDiseaseorAttack stability_ratio=1.4172, max_class_var=0.1732
+              DiffWalk stability_ratio=1.3072, max_class_var=0.2334
+              PhysHlth stability_ratio=1.3059, max_class_var=127.7237
+              MentHlth stability_ratio=1.2686, max_class_var=80.0616
+           NoDocbcCost stability_ratio=1.2132, max_class_var=0.1126
+          PhysActivity stability_ratio=1.1280, max_class_var=0.2330
+               Veggies stability_ratio=1.1080, max_class_var=0.1843
+             Education stability_ratio=1.0981, max_class_var=1.1540
+                   BMI stability_ratio=1.0832, max_class_var=54.2197
+
+diabetes_binary_5050:
+         AnyHealthcare stability_ratio=0.9995, max_class_var=0.0474
+           NoDocbcCost stability_ratio=0.9983, max_class_var=0.0947
+                   Sex stability_ratio=0.9980, max_class_var=0.2496
+                Fruits stability_ratio=0.9971, max_class_var=0.2427
+               Veggies stability_ratio=0.9937, max_class_var=0.1843
+                Smoker stability_ratio=0.9926, max_class_var=0.2497
+              MentHlth stability_ratio=0.9924, max_class_var=80.0616
+     HvyAlcoholConsump stability_ratio=0.9910, max_class_var=0.0581
+             CholCheck stability_ratio=0.9867, max_class_var=0.0408
+                Stroke stability_ratio=0.9843, max_class_var=0.0839
+
+diabetes_binary_full:
+                Stroke stability_ratio=1.4778, max_class_var=0.0839
+  HeartDiseaseorAttack stability_ratio=1.4135, max_class_var=0.1732
+              PhysHlth stability_ratio=1.2681, max_class_var=127.7237
+              DiffWalk stability_ratio=1.2523, max_class_var=0.2334
+              MentHlth stability_ratio=1.1887, max_class_var=80.0616
+          PhysActivity stability_ratio=1.1029, max_class_var=0.2330
+           NoDocbcCost stability_ratio=1.0949, max_class_var=0.0947
+               Veggies stability_ratio=1.0837, max_class_var=0.1843
+                   BMI stability_ratio=1.0739, max_class_var=54.2197
+             Education stability_ratio=1.0571, max_class_var=1.1249
+
+5) MISSING VALUES (if any)
+------------------------------------------------------------
+No missing values detected in any dataset.
+
+6) OUTLIER DETECTION (IQR Method, Top 10)
+------------------------------------------------------------
+  diabetes_binary_full.        PhysActivity outlier_ratio=24.35%, mean=0.7565, std=0.4292
+  diabetes_012.        PhysActivity outlier_ratio=24.35%, mean=0.7565, std=0.4292
+  diabetes_binary_5050.             Veggies outlier_ratio=21.12%, mean=0.7888, std=0.4082
+  diabetes_012.             Veggies outlier_ratio=18.86%, mean=0.8114, std=0.3912
+  diabetes_binary_full.             Veggies outlier_ratio=18.86%, mean=0.8114, std=0.3912
+  diabetes_binary_full.            DiffWalk outlier_ratio=16.82%, mean=0.1682, std=0.3741
+  diabetes_012.            DiffWalk outlier_ratio=16.82%, mean=0.1682, std=0.3741
+  diabetes_binary_5050.            MentHlth outlier_ratio=16.71%, mean=3.7520, std=8.1556
+  diabetes_012.            PhysHlth outlier_ratio=16.14%, mean=4.2421, std=8.7180
+  diabetes_binary_full.            PhysHlth outlier_ratio=16.14%, mean=4.2421, std=8.7180
+
+7) KEY INSIGHTS & RECOMMENDATIONS
+------------------------------------------------------------
+Best quality dataset: diabetes_binary_5050 (score: 99.4/100)
+- Use binary_5050 split for balanced model training (addresses class imbalance).
+- Apply feature scaling (StandardScaler/RobustScaler) for models sensitive to magnitude.
+- Consider feature engineering for high-outlier columns.
+- Validate correlation findings with domain expertise before feature selection.
+- Monitor variance stability across folds in cross-validation.
+
+============================================================

@@ -1,0 +1,84 @@
+======================================================================
+FEATURE ENGINEERING & SELECTION RECOMMENDATIONS
+======================================================================
+
+PHASE 1: Feature Selection Strategy
+----------------------------------------------------------------------
+
+TOP FEATURES FOR INCLUSION (58 features):
+
+  diabetes_binary_5050:
+    1.              GenHlth importance=0.6451
+    2.               HighBP importance=0.6182
+    3.                  BMI importance=0.5336
+    4.             HighChol importance=0.5298
+    5.                  Age importance=0.5204
+    6.             DiffWalk importance=0.5149
+    7.               Income importance=0.4730
+    8.             PhysHlth importance=0.4634
+
+  diabetes_012:
+    1.            CholCheck importance=0.5772
+    2.              GenHlth importance=0.5416
+    3.               HighBP importance=0.5278
+    4.                  Age importance=0.5111
+    5.             HighChol importance=0.4641
+    6.                  BMI importance=0.4340
+    7.    HvyAlcoholConsump importance=0.4258
+    8.               Income importance=0.3995
+
+  diabetes_binary_full:
+    1.              GenHlth importance=0.5369
+    2.               HighBP importance=0.5334
+    3.            CholCheck importance=0.5016
+    4.                  Age importance=0.4961
+    5.             HighChol importance=0.4604
+    6.    HvyAlcoholConsump importance=0.4343
+    7.                  BMI importance=0.4312
+    8.               Income importance=0.4017
+
+PHASE 2: Scaling & Normalization
+----------------------------------------------------------------------
+
+FEATURES REQUIRING SCALING (19 columns with high variance):
+  -             PhysHlth std=10.0623, range=[0.00, 30.00]
+  -             PhysHlth std=8.7180, range=[0.00, 30.00]
+  -             PhysHlth std=8.7180, range=[0.00, 30.00]
+  -             MentHlth std=8.1556, range=[0.00, 30.00]
+  -             MentHlth std=7.4128, range=[0.00, 30.00]
+  -             MentHlth std=7.4128, range=[0.00, 30.00]
+  -                  BMI std=7.1140, range=[12.00, 98.00]
+  -                  BMI std=6.6087, range=[12.00, 98.00]
+
+PHASE 3: Outlier Handling
+----------------------------------------------------------------------
+
+OUTLIER-PRONE FEATURES (24 columns > 5% outliers):
+  -         PhysActivity outlier_ratio=24.35%
+  -         PhysActivity outlier_ratio=24.35%
+  -              Veggies outlier_ratio=21.12%
+  -              Veggies outlier_ratio=18.86%
+  -              Veggies outlier_ratio=18.86%
+  -             DiffWalk outlier_ratio=16.82%
+  -             DiffWalk outlier_ratio=16.82%
+  -             MentHlth outlier_ratio=16.71%
+
+PHASE 4: Feature Interactions & Creation
+----------------------------------------------------------------------
+
+Recommended composite features:
+  - Age × HighBP interaction (age-stratified hypertension risk)
+  - BMI × PhysActivity interaction (fitness impact on obesity)
+  - GenHlth + MentHlth + PhysHlth (total health burden index)
+  - Income × Education (SES proxy)
+
+PHASE 5: Model Training Strategy
+----------------------------------------------------------------------
+
+- Use diabetes_binary_5050 for balanced training (50/50 class split)
+- Apply StandardScaler post-split (fit on train, transform on test/val)
+- Enable class_weight='balanced' in tree-based models for binary_full data
+- Use stratified cross-validation with folds=5 minimum
+- Monitor for multicollinearity if using linear models
+
+======================================================================

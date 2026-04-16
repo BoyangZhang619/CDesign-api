@@ -1,0 +1,8 @@
+dataset,target_column,class,count,ratio
+diabetes_012,Diabetes_012,0.0,213703,0.8424116997792495
+diabetes_012,Diabetes_012,1.0,4631,0.018255282245348472
+diabetes_012,Diabetes_012,2.0,35346,0.13933301797540207
+diabetes_binary_5050,Diabetes_binary,0.0,35346,0.5
+diabetes_binary_5050,Diabetes_binary,1.0,35346,0.5
+diabetes_binary_full,Diabetes_binary,0.0,218334,0.8606669820245979
+diabetes_binary_full,Diabetes_binary,1.0,35346,0.13933301797540207

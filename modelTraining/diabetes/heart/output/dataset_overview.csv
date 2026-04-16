@@ -1,0 +1,2 @@
+Dataset,Total_Rows,Total_Columns,Numeric_Columns,Categorical_Columns,Missing_Values,Missing_Percentage,Duplicate_Rows,Duplicate_Percentage,Memory_MB
+heart_disease,319795,18,4,14,0,0.0,18078,5.65,232.85

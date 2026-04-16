@@ -1,0 +1,5 @@
+Feature,Overall_Variance,Avg_Group_Variance,Stability_Ratio,Stability_Assessment
+PhysicalHealth,63.216,93.3678,1.477,Stable
+SleepTime,2.0621,2.5648,1.2438,Stable
+MentalHealth,63.2858,72.7016,1.1488,Stable
+BMI,40.4,41.6364,1.0306,Stable

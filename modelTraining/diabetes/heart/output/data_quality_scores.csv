@@ -1,0 +1,2 @@
+Dataset,Quality_Score,Missing_Penalty,Duplicate_Penalty,Outlier_Penalty,Overall_Assessment
+heart_disease,94.7,0.0,5.65,3,Good

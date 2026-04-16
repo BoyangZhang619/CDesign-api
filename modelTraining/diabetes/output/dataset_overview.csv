@@ -1,0 +1,4 @@
+dataset,rows,columns,total_missing_values,duplicate_rows
+diabetes_012,253680,22,0,23899
+diabetes_binary_5050,70692,22,0,1635
+diabetes_binary_full,253680,22,0,24206

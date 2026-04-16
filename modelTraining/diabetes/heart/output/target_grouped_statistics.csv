@@ -1,0 +1,9 @@
+Target_Class,Feature,Count,Mean,Std,Min,Max
+No,BMI,292422,28.2247,6.3257,12.02,94.85
+No,PhysicalHealth,292422,2.9564,7.4004,0.0,30.0
+No,MentalHealth,292422,3.8288,7.8281,0.0,30.0
+No,SleepTime,292422,7.0934,1.3993,1.0,24.0
+Yes,BMI,27373,29.4016,6.5772,12.21,83.33
+Yes,PhysicalHealth,27373,7.8082,11.4878,0.0,30.0
+Yes,MentalHealth,27373,4.6418,9.1719,0.0,30.0
+Yes,SleepTime,27373,7.1362,1.7809,1.0,24.0
