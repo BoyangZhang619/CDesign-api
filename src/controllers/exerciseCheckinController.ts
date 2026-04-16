@@ -512,7 +512,7 @@ async function calculateAISummary(summaryData: object,userId: number) {
     // 在这里实现AI分析总结的计算逻辑
     try {
         const prompt = `请基于以下运动数据进行AI分析总结：
-
+        ${JSON.stringify(summaryData)}
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
     1.这是当天得到的运动数据，请分析并评价这些数据。`;
 
@@ -536,12 +536,12 @@ async function calculateAISummary(summaryData: object,userId: number) {
 
                 if ((existingRows as any[]).length > 0) {
                     await pool.query(
-                        'UPDATE checkin_ai_summary SET exercise_ai_summary = ? WHERE daily_checkin_id = ?',
+                        'UPDATE checkin_ai_summary SET exercise_ai_summary = ?, is_exercise_summary_updated = 1 WHERE daily_checkin_id = ?',
                         [aiResult.content, dailyCheckinId]
                     );
                 } else {
                     await pool.query(
-                        'INSERT INTO checkin_ai_summary (daily_checkin_id, exercise_ai_summary) VALUES (?, ?)',
+                        'INSERT INTO checkin_ai_summary (daily_checkin_id, exercise_ai_summary, is_exercise_summary_updated) VALUES (?, ?, 1)',
                         [dailyCheckinId, aiResult.content]
                     );
                 }

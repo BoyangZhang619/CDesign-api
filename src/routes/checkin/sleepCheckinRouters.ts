@@ -12,7 +12,7 @@ router.put("/checkin/sleep/:sleepRecordId", updateSleepRecord);
 router.delete("/checkin/sleep/:sleepRecordId", deleteSleepRecord);
 router.get("/checkin/sleep/statistics", getSleepStatistics);
 router.get("/checkin/sleep/summary", getSummary);
-router.get("/checkin/sleep/ai-summary", getAISummary);
 router.get("/checkin/sleep/ai-summary/all", getAllDailyAISummary);
+router.get("/checkin/sleep/ai-summary", getAISummary);
 
 export default router;

@@ -17,7 +17,7 @@ router.post("/checkin/meal", insertCheckInRecord);
 router.get("/checkin/meal", getCheckInRecords);
 router.get("/checkin/meal/paginated/:limit/:offset", getCheckInRecordsWithPagination);
 router.get("/checkin/meal/summary", getSummary);
-router.get("/checkin/meal/ai-summary", getAISummary);
 router.get("/checkin/meal/ai-summary/all", getAllDailyAISummary);
+router.get("/checkin/meal/ai-summary", getAISummary);
 
 export default router;

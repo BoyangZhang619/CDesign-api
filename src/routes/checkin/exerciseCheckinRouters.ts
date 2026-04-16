@@ -37,10 +37,10 @@ router.get("/checkin/exercise/statistics/type", getExerciseStatisticsByType);
 // 获取运动总结
 router.get("/checkin/exercise/summary", getSummary);
 
+// 获取所有AI总结（包含所有维度）- 更具体的路由必须放在前面
+router.get("/checkin/exercise/ai-summary/all", getAllDailyAISummary);
+
 // 获取AI分析总结
 router.get("/checkin/exercise/ai-summary", getAISummary);
-
-// 获取所有AI总结（包含所有维度）
-router.get("/checkin/exercise/ai-summary/all", getAllDailyAISummary);
 
 export default router;
