@@ -1,8 +1,8 @@
 ======================================================================
-FEATURE ENGINEERING & SELECTION RECOMMENDATIONS
+特征工程与选择建议
 ======================================================================
 
-PHASE 1: Feature Selection Strategy
+阶段1: 特征选择策略
 ----------------------------------------------------------------------
 
 TOP FEATURES FOR INCLUSION (58 features):
@@ -37,7 +37,7 @@ TOP FEATURES FOR INCLUSION (58 features):
     7.                  BMI importance=0.4312
     8.               Income importance=0.4017
 
-PHASE 2: Scaling & Normalization
+阶段2: 缩放与标准化
 ----------------------------------------------------------------------
 
 FEATURES REQUIRING SCALING (19 columns with high variance):
@@ -50,7 +50,7 @@ FEATURES REQUIRING SCALING (19 columns with high variance):
   -                  BMI std=7.1140, range=[12.00, 98.00]
   -                  BMI std=6.6087, range=[12.00, 98.00]
 
-PHASE 3: Outlier Handling
+阶段3: 异常值处理
 ----------------------------------------------------------------------
 
 OUTLIER-PRONE FEATURES (24 columns > 5% outliers):
@@ -63,7 +63,7 @@ OUTLIER-PRONE FEATURES (24 columns > 5% outliers):
   -             DiffWalk outlier_ratio=16.82%
   -             MentHlth outlier_ratio=16.71%
 
-PHASE 4: Feature Interactions & Creation
+阶段4: 特征交互与创建
 ----------------------------------------------------------------------
 
 Recommended composite features:
@@ -72,7 +72,7 @@ Recommended composite features:
   - GenHlth + MentHlth + PhysHlth (total health burden index)
   - Income × Education (SES proxy)
 
-PHASE 5: Model Training Strategy
+阶段5: 模型训练策略
 ----------------------------------------------------------------------
 
 - Use diabetes_binary_5050 for balanced training (50/50 class split)

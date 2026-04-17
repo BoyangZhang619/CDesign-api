@@ -9,7 +9,7 @@ from datetime import datetime
 warnings.filterwarnings('ignore')
 
 print('='*80)
-print('Heart Disease Data Complete Analysis')
+print('心脏病数据完整分析')
 print('='*80)
 
 # Create output directory
@@ -19,14 +19,14 @@ if not os.path.exists(output_dir):
 
 # Load data
 df = pd.read_csv('heart_2020_cleaned.csv/heart_2020_cleaned.csv')
-print('[OK] Data loaded: {} rows, {} columns'.format(df.shape[0], df.shape[1]))
+print('[OK] 数据加载完成: {} 行, {} 列'.format(df.shape[0], df.shape[1]))
 
 # Basic statistics
 numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 target_col = 'HeartDisease'
 
-print('[INFO] Numeric features: {} | Categorical features: {}'.format(len(numeric_cols), len(categorical_cols)))
+print('[INFO] 数值特征: {} | 分类特征: {}'.format(len(numeric_cols), len(categorical_cols)))
 
 # 1. Dataset overview
 dataset_overview = pd.DataFrame({
@@ -42,7 +42,7 @@ dataset_overview = pd.DataFrame({
     'Memory_MB': [round(df.memory_usage(deep=True).sum() / 1024**2, 2)]
 })
 dataset_overview.to_csv('{}/dataset_overview.csv'.format(output_dir), index=False)
-print('[OK] dataset_overview.csv')
+print('[OK] 数据集概览.csv')
 
 # 2. Column profile
 column_profile = pd.DataFrame({
@@ -54,7 +54,7 @@ column_profile = pd.DataFrame({
     'Unique_Values': [df[col].nunique() for col in df.columns],
 })
 column_profile.to_csv('{}/column_profile.csv'.format(output_dir), index=False)
-print('[OK] column_profile.csv')
+print('[OK] 列配置.csv')
 
 # 3. Missingness report
 missingness_report = pd.DataFrame({
@@ -66,7 +66,7 @@ missingness_report = missingness_report[missingness_report['Missing_Count'] > 0]
 if len(missingness_report) == 0:
     missingness_report = pd.DataFrame({'Column': ['None'], 'Missing_Count': [0], 'Missing_Percentage': [0.0]})
 missingness_report.to_csv('{}/missingness_report.csv'.format(output_dir), index=False)
-print('[OK] missingness_report.csv')
+print('[OK] 缺失值报告.csv')
 
 # 4. Quality score
 def calculate_quality_score(df):
@@ -92,7 +92,7 @@ data_quality_scores = pd.DataFrame({
     'Overall_Assessment': ['Excellent' if quality_score > 95 else 'Good' if quality_score > 85 else 'Fair']
 })
 data_quality_scores.to_csv('{}/data_quality_scores.csv'.format(output_dir), index=False)
-print('[OK] data_quality_scores.csv (Quality: {:.1f}/100)'.format(quality_score))
+print('[OK] 数据质量评分.csv (质量: {:.1f}/100)'.format(quality_score))
 
 # 5. Target balance
 target_balance = pd.DataFrame({
@@ -101,7 +101,7 @@ target_balance = pd.DataFrame({
     'Percentage': (100 * df[target_col].value_counts() / len(df)).values
 })
 target_balance.to_csv('{}/target_balance.csv'.format(output_dir), index=False)
-print('[OK] target_balance.csv')
+print('[OK] 目标平衡.csv')
 
 # Encode categorical variables
 df_encoded = df.copy()
@@ -132,7 +132,7 @@ for col in df_encoded.columns:
 feature_target_corr_df = pd.DataFrame(feature_target_corr)
 feature_target_corr_df = feature_target_corr_df.sort_values('Absolute_Correlation', ascending=False)
 feature_target_corr_df.to_csv('{}/feature_target_correlations.csv'.format(output_dir), index=False)
-print('[OK] feature_target_correlations.csv')
+print('[OK] 特征目标相关性.csv')
 
 # 7. Feature importance ranking
 feature_importance = []
@@ -161,7 +161,7 @@ for col in df_encoded.columns:
 feature_importance_df = pd.DataFrame(feature_importance)
 feature_importance_df = feature_importance_df.sort_values('Importance', ascending=False)
 feature_importance_df.to_csv('{}/feature_importance_ranking.csv'.format(output_dir), index=False)
-print('[OK] feature_importance_ranking.csv')
+print('[OK] 特征重要性排名.csv')
 
 # 8. Feature distribution comparison
 feature_distribution = []
@@ -192,7 +192,7 @@ if feature_distribution:
     feature_dist_df = pd.DataFrame(feature_distribution)
     feature_dist_df = feature_dist_df.sort_values('Cohens_d', key=abs, ascending=False)
     feature_dist_df.to_csv('{}/feature_distribution_comparison.csv'.format(output_dir), index=False)
-    print('[OK] feature_distribution_comparison.csv')
+    print('[OK] 特征分布比较.csv')
 
 # 9. Multicollinearity detection
 multicollinearity = []
@@ -216,11 +216,11 @@ for i, col1 in enumerate(df_encoded.columns):
 if multicollinearity:
     mc_df = pd.DataFrame(multicollinearity)
     mc_df.to_csv('{}/feature_multicollinearity.csv'.format(output_dir), index=False)
-    print('[OK] feature_multicollinearity.csv ({} pairs)'.format(len(mc_df)))
+    print('[OK] 特征多重共线性.csv ({} 对)'.format(len(mc_df)))
 else:
     mc_df = pd.DataFrame({'Result': ['No high multicollinearity (all <= 0.7)']})
     mc_df.to_csv('{}/feature_multicollinearity.csv'.format(output_dir), index=False)
-    print('[OK] feature_multicollinearity.csv (No issues)')
+    print('[OK] 特征多重共线性.csv (无问题)')
 
 # 10. Variance analysis
 variance_analysis = []
@@ -244,7 +244,7 @@ if variance_analysis:
     var_df = pd.DataFrame(variance_analysis)
     var_df = var_df.sort_values('Stability_Ratio', ascending=False)
     var_df.to_csv('{}/feature_variance_analysis.csv'.format(output_dir), index=False)
-    print('[OK] feature_variance_analysis.csv')
+    print('[OK] 特征方差分析.csv')
 
 # 11. Numeric summary
 numeric_summary = []
@@ -271,7 +271,7 @@ for col in numeric_cols:
 
 numeric_summary_df = pd.DataFrame(numeric_summary)
 numeric_summary_df.to_csv('{}/numeric_summary_outliers.csv'.format(output_dir), index=False)
-print('[OK] numeric_summary_outliers.csv')
+print('[OK] 数值摘要异常值.csv')
 
 # 12. Target grouped statistics
 target_grouped_stats = []
@@ -290,7 +290,7 @@ for target_val in df[target_col].unique():
 
 tgs_df = pd.DataFrame(target_grouped_stats)
 tgs_df.to_csv('{}/target_grouped_statistics.csv'.format(output_dir), index=False)
-print('[OK] target_grouped_statistics.csv')
+print('[OK] 目标分组统计.csv')
 
 # 13. Engineered features preview
 engineered_features = []
@@ -325,30 +325,30 @@ try:
         if engineered_features:
             eng_df = pd.DataFrame(engineered_features)
             eng_df.to_csv('{}/engineered_features_preview.csv'.format(output_dir), index=False)
-            print('[OK] engineered_features_preview.csv ({} features)'.format(len(engineered_features)))
+            print('[OK] 工程特征预览.csv ({} 个特征)'.format(len(engineered_features)))
 except:
     pass
 
 print()
 print('='*80)
-print('All CSV files generated successfully!')
+print('所有CSV文件生成成功!')
 print('='*80)
-print('Total files created: 13 CSV files')
-print('Output directory: {}'.format(output_dir))
+print('创建文件总数: 13个CSV文件')
+print('输出目录: {}'.format(output_dir))
 print()
 
 # Print summary statistics
-print('[SUMMARY] Top 3 Features by Importance:')
+print('[摘要] 按重要性排序前3个特征:')
 for idx, row in feature_importance_df.head(3).iterrows():
     print('  {}. {} (importance={:.4f})'.format(idx+1, row['Feature'], row['Importance']))
 
 print()
-print('[SUMMARY] Target Balance:')
+print('[摘要] 目标平衡:')
 for idx, row in target_balance.iterrows():
     print('  {}: {} ({:.2f}%)'.format(row['Class'], int(row['Count']), row['Percentage']))
 
 print()
-print('[SUMMARY] Data Quality: {:.1f}/100'.format(quality_score))
-print('[SUMMARY] Analysis completed successfully!')
+print('[摘要] 数据质量: {:.1f}/100'.format(quality_score))
+print('[摘要] 分析完成!')
 print('='*80)
 

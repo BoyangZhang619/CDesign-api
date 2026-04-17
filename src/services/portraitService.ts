@@ -4,7 +4,7 @@
  */
 
 import { PortraitDAL } from './portraitDAL.js';
-import { commonChat } from '../controllers/aiController.js';
+import { AIChatService } from './aiChatService.js';
 import type {
   PortraitData,
   RadarData,
@@ -17,6 +17,7 @@ import type {
   Priority
 } from '../types/portrait.js';
 import { getCurrentDateTimeString } from '../util/dateTime.js';
+import { get } from 'http';
 
 export class PortraitService {
   /**
@@ -507,6 +508,7 @@ export class PortraitService {
       // 2. 用户无数据，获取最近的打卡数据
       const checkinData = await PortraitDAL.getLatestCheckinData(userId);
 
+
       // 3. 使用 aiChat 分析打卡数据并生成新的评分
       const analysisResult = await this.analyzeCheckinDataWithAI(userId, checkinData);
 
@@ -574,7 +576,7 @@ export class PortraitService {
       
       // 构建包含用户背景信息的 AI 分析提示
       const analysisPrompt = `
-请根据以下用户的健康信息和最近的打卡数据进行综合分析，并返回 JSON 格式的评分结果。
+请根据以下用户的健康信息、最近的打卡数据以及任务完成情况进行综合分析，并返回 JSON 格式的评分结果。
 
 【用户背景信息】
 年龄: ${userProfile?.age || '未知'}岁
@@ -605,11 +607,17 @@ export class PortraitService {
 - 平均睡眠时长: ${checkinData.sleepData && checkinData.sleepData.length > 0 ? Math.round(checkinData.sleepData.reduce((sum: number, s: any) => sum + (Number(s.sleep_duration_hours) || 0), 0) / checkinData.sleepData.length * 10) / 10 : 0}小时
 - 平均睡眠质量评分: ${checkinData.sleepData && checkinData.sleepData.length > 0 ? Math.round(checkinData.sleepData.reduce((sum: number, s: any) => sum + (s.sleep_quality_score || 0), 0) / checkinData.sleepData.length) : 0}/100
 
+任务完成情况（最近7天）:
+- 总完成任务数: ${checkinData.taskCompletionData?.length || 0}条
+${checkinData.taskCompletionData && checkinData.taskCompletionData.length > 0 ? `- 任务类型分布: ${[...new Set(checkinData.taskCompletionData.map((t: any) => t.task_type))].join(', ')}
+- 优先级分布: ${[...new Set(checkinData.taskCompletionData.map((t: any) => t.task_priority))].join(', ')}
+- 完成的任务: ${checkinData.taskCompletionData.slice(0, 5).map((t: any) => t.task_title).join('、')}${checkinData.taskCompletionData.length > 5 ? '等' : ''}` : '- 未完成任何任务'}
+
 身体指标:
 - BMI: ${checkinData.bmi?.toFixed(1) || '未知'}
 
 【分析要求】
-根据上述用户背景和打卡数据，请分析用户的健康状况，并返回以下 JSON 格式的结果（只返回JSON，不要其他文字）：
+根据上述用户背景、打卡数据和任务完成情况，请分析用户的健康状况和自律程度，并返回以下 JSON 格式的结果（只返回JSON，不要其他文字）：
 
 {
   "exerciseScore": 0-100 的数字,
@@ -624,16 +632,19 @@ export class PortraitService {
   "sleepQualityStatus": "excellent|good|normal|poor 中的一个"
 }`;
 
-      // 调用 aiChat 获取分析结果
-      const aiResult = await commonChat({
-        user_content: analysisPrompt,
-        system_content: '你是一个专业的健康分析师，根据用户提供的健康数据和打卡信息进行分析，必须返回有效的JSON格式数据。',
-        model: 'qwen3.5-plus'
-      });
+      // 调用 AIChatService 获取分析结果
+      const sessionData = {
+        title: `Portrait Analysis ${getCurrentDateTimeString().split('T')[0]}`,
+        description: '打卡数据AI分析',
+        ai_model: 'dashscope'
+      };
+
+      const session = await AIChatService.createSession(userId, sessionData);
+      const aiResult = await AIChatService.sendMessage(userId, session.id, analysisPrompt);
 
       // 检查 AI 调用是否成功
-      if (!aiResult.ok) {
-        console.warn('[PortraitService.analyzeCheckinDataWithAI] AI 调用失败:', aiResult.content);
+      if (!aiResult?.aiMessage) {
+        console.warn('[PortraitService.analyzeCheckinDataWithAI] AI 调用失败: 无有效响应');
         // 使用本地计算作为备选方案
         return {
           exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
@@ -653,7 +664,7 @@ export class PortraitService {
       let result;
       try {
         // 尝试从响应中提取 JSON
-        const jsonMatch = aiResult.content.match(/\{[\s\S]*\}/);
+        const jsonMatch = aiResult.aiMessage.content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           result = JSON.parse(jsonMatch[0]);
           console.log('[PortraitService.analyzeCheckinDataWithAI] AI 分析结果:', result);

@@ -515,10 +515,23 @@ export class PortraitDAL {
         WHERE user_id = ?
       `;
 
+      // 获取用户任务完成情况
+      const taskCompletionQuery = `
+        SELECT 
+          task_title, task_type, task_priority, completion_date, 
+          completion_time
+        FROM task_completion_record
+        WHERE user_id = ? 
+          AND DATE(completion_date) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(completion_date) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        ORDER BY completion_date DESC
+      `;
+
       const [exerciseData] = await pool.query(exerciseQuery, [userId, offset + days, offset]);
       const [mealData] = await pool.query(mealQuery, [userId, offset + days, offset]);
       const [sleepData] = await pool.query(sleepQuery, [userId, offset + days, offset]);
       const [profileData] = await pool.query(profileQuery, [userId]);
+      const [taskCompletionData] = await pool.query(taskCompletionQuery, [userId, offset + days, offset]);
 
       // 计算 BMI
       let bmi = 0;
@@ -535,6 +548,7 @@ export class PortraitDAL {
         exerciseData: (exerciseData as any[]) || [],
         mealData: (mealData as any[]) || [],
         sleepData: (sleepData as any[]) || [],
+        taskCompletionData: (taskCompletionData as any[]) || [],
         bmi
       };
     } catch (error) {

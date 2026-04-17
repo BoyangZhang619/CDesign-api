@@ -3,7 +3,7 @@ import pool from '../config/db.js';
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import { getUserIdFromReq } from './sharedMethods.js';
-import { commonChat } from './aiController.js';
+import { AIChatService } from '../services/aiChatService.js';
 import { getSummaryResult as getMealSummaryResult } from './mealCheckinController.js';
 import { getSummaryResult as getSleepSummaryResult } from './sleepCheckinController.js';
 import { getSummaryResult as getExerciseSummaryResult } from './exerciseCheckinController.js';
@@ -234,20 +234,26 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
 }
 
 async function calculateAISummary(summaryData: object, userId: number) {
-    // 在这里实现AI分析总结的计算逻辑
+    // 使用 AIChatService 来处理 AI 分析总结
     try {
         const prompt = `请基于以下当日健康数据（睡眠，运动，饮食）进行AI分析总结：
     ${JSON.stringify(summaryData, null, 2)}
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题，不要与内容无关的评价)：
     1.这是当天得到的睡眠，运动，饮食数据，请分析并评价这些数据。`;
 
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        // 创建一个临时会话用于单次 AI 调用
+        const sessionData = {
+            title: `Daily Summary ${getCurrentDateString()}`,
+            description: '每日健康数据分析总结',
+            ai_model: 'dashscope'
+        };
 
-        if (aiResult.ok) {
+        const session = await AIChatService.createSession(userId, sessionData);
+        
+        // 发送消息并获取 AI 响应
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (aiResult && aiResult.aiMessage) {
             const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
@@ -262,17 +268,17 @@ async function calculateAISummary(summaryData: object, userId: number) {
                 if ((existingRows as any[]).length > 0) {
                     await pool.query(
                         'UPDATE checkin_ai_summary SET total_ai_summary = ? WHERE daily_checkin_id = ?',
-                        [aiResult.content, dailyCheckinId]
+                        [aiResult.aiMessage.content, dailyCheckinId]
                     );
                 } else {
                     await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, total_ai_summary) VALUES (?, ?)',
-                        [dailyCheckinId, aiResult.content]
+                        [dailyCheckinId, aiResult.aiMessage.content]
                     );
                 }
             }
         } else {
-            console.error('AI分析总结失败:', aiResult.content);
+            console.error('AI分析总结失败: 无有效响应');
         }
     } catch (error) {
         console.error('计算AI分析总结失败:', error);

@@ -452,11 +452,11 @@ def write_report(
 ) -> None:
     lines: list[str] = []
     lines.append("=" * 60)
-    lines.append("DIABETES DATASET ANALYSIS REPORT")
+    lines.append("糖尿病数据集分析报告")
     lines.append("=" * 60)
     lines.append("")
 
-    lines.append("1) DATASET OVERVIEW & QUALITY SCORES")
+    lines.append("1) 数据集概览与质量评分")
     lines.append("-" * 60)
     for _, r in quality_df.iterrows():
         lines.append(f"\nDataset: {r['dataset']}")
@@ -466,7 +466,7 @@ def write_report(
         lines.append(f"  QUALITY SCORE: {r['quality_score']:.1f}/100")
     lines.append("")
 
-    lines.append("2) TARGET DISTRIBUTION & CLASS BALANCE")
+    lines.append("2) 目标变量分布与类别平衡")
     lines.append("-" * 60)
     if target_df.empty:
         lines.append("No recognized target columns found.")
@@ -478,7 +478,7 @@ def write_report(
                 lines.append(f"  Class {r['class']:>3} → {int(r['count']):>8} samples ({r['ratio']:>6.2%})")
     lines.append("")
 
-    lines.append("3) FEATURE-TARGET CORRELATION (Top 15)")
+    lines.append("3) 特征-目标相关性 (前15个)")
     lines.append("-" * 60)
     if corr_df.empty:
         lines.append("No correlations computed.")
@@ -491,7 +491,7 @@ def write_report(
                 lines.append(f"  {r['feature']:>20} corr={r['correlation']:>7.4f} (p={r['p_value']:.2e}) {sig}")
     lines.append("")
 
-    lines.append("4) FEATURE VARIANCE STABILITY (Top 10 unstable)")
+    lines.append("4) 特征方差稳定性 (前10个不稳定特征)")
     lines.append("-" * 60)
     if variance_df.empty:
         lines.append("No variance analysis available.")
@@ -503,7 +503,7 @@ def write_report(
                 lines.append(f"  {r['feature']:>20} stability_ratio={r['variance_stability_ratio']:.4f}, max_class_var={r['max_class_variance']:.4f}")
     lines.append("")
 
-    lines.append("5) MISSING VALUES (if any)")
+    lines.append("5) 缺失值 (如有)")
     lines.append("-" * 60)
     if missing_df.empty:
         lines.append("No missing values detected in any dataset.")
@@ -513,7 +513,7 @@ def write_report(
             lines.append(f"  {r['dataset']}.{r['column']}: {int(r['missing_count'])} ({r['missing_ratio']:.2%})")
     lines.append("")
 
-    lines.append("6) OUTLIER DETECTION (IQR Method, Top 10)")
+    lines.append("6) 异常值检测 (IQR方法, 前10个)")
     lines.append("-" * 60)
     if numeric_df.empty:
         lines.append("No numeric columns for analysis.")
@@ -523,7 +523,7 @@ def write_report(
             lines.append(f"  {r['dataset']}.{r['column']:>20} outlier_ratio={r['outlier_ratio_iqr']:.2%}, mean={r['mean']:.4f}, std={r['std']:.4f}")
     lines.append("")
 
-    lines.append("7) KEY INSIGHTS & RECOMMENDATIONS")
+    lines.append("7) 关键洞察与建议")
     lines.append("-" * 60)
     best_quality = quality_df.loc[quality_df['quality_score'].idxmax()] if not quality_df.empty else None
     if best_quality is not None:
@@ -550,11 +550,11 @@ def generate_engineering_recommendations(
     """Generate detailed feature engineering recommendations."""
     lines = []
     lines.append("=" * 70)
-    lines.append("FEATURE ENGINEERING & SELECTION RECOMMENDATIONS")
+    lines.append("特征工程与选择建议")
     lines.append("=" * 70)
     lines.append("")
 
-    lines.append("PHASE 1: Feature Selection Strategy")
+    lines.append("阶段1: 特征选择策略")
     lines.append("-" * 70)
     lines.append("")
 
@@ -568,7 +568,7 @@ def generate_engineering_recommendations(
                 lines.append(f"    {idx}. {r['feature']:>20} importance={r['composite_importance']:.4f}")
 
     lines.append("")
-    lines.append("PHASE 2: Scaling & Normalization")
+    lines.append("阶段2: 缩放与标准化")
     lines.append("-" * 70)
     lines.append("")
 
@@ -579,7 +579,7 @@ def generate_engineering_recommendations(
             lines.append(f"  - {r['column']:>20} std={r['std']:.4f}, range=[{r['min']:.2f}, {r['max']:.2f}]")
 
     lines.append("")
-    lines.append("PHASE 3: Outlier Handling")
+    lines.append("阶段3: 异常值处理")
     lines.append("-" * 70)
     lines.append("")
 
@@ -590,7 +590,7 @@ def generate_engineering_recommendations(
             lines.append(f"  - {r['column']:>20} outlier_ratio={r['outlier_ratio_iqr']:.2%}")
 
     lines.append("")
-    lines.append("PHASE 4: Feature Interactions & Creation")
+    lines.append("阶段4: 特征交互与创建")
     lines.append("-" * 70)
     lines.append("")
     lines.append("Recommended composite features:")
@@ -600,7 +600,7 @@ def generate_engineering_recommendations(
     lines.append("  - Income × Education (SES proxy)")
     lines.append("")
 
-    lines.append("PHASE 5: Model Training Strategy")
+    lines.append("阶段5: 模型训练策略")
     lines.append("-" * 70)
     lines.append("")
     lines.append("- Use diabetes_binary_5050 for balanced training (50/50 class split)")
@@ -671,11 +671,11 @@ def main() -> None:
         path=OUTPUT_DIR / "feature_engineering_recommendations.txt"
     )
 
-    print("✓ Analysis completed. Outputs saved to:", OUTPUT_DIR)
-    print(f"\nGenerated CSV files:")
+    print("✓ 分析完成。输出保存至:", OUTPUT_DIR)
+    print(f"\n生成的CSV文件:")
     for csv_file in sorted(OUTPUT_DIR.glob("*.csv")):
         print(f"  - {csv_file.name}")
-    print(f"\nGenerated Report Files:")
+    print(f"\n生成的报告文件:")
     for txt_file in sorted(OUTPUT_DIR.glob("*.txt")):
         print(f"  - {txt_file.name}")
 

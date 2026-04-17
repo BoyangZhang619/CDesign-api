@@ -3,7 +3,7 @@ import { sendError, sendResult } from "../util/response.js";
 import { Request, Response } from "express";
 import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
-import { commonChat } from "./aiController.js";
+import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
 
@@ -117,30 +117,33 @@ async function generateSleepAnalysisAsync(
 ) {
     try {
         // 构建AI请求内容
-        const prompt = `请根据以下睡眠信息生成睡眠分析：
+        const prompt = `[睡眠健康信息的的数据内容处理与分析]请根据以下睡眠信息生成睡眠分析：
 睡眠时长: ${sleepDurationHours}小时
 睡眠类型: ${isNap === 1 ? '午睡' : '夜间睡眠'}
 睡眠中苏醒次数: ${wakeUpTimes ?? '未记录'}次
 个人感觉: ${sleepFeeling ?? '未记录'}
 
-请返回以下格式的数据（用|分隔）：
+请返回以下格式的数据（用|分隔,，不必复述信息，不得额外输出内容，若个人感觉内容无相关性请忽略）：
 格式: 睡眠质量评分(0-100)|建议(简要文本，最多50字)|评价(简要文本，最多100字)
 示例: 75|建议保持规律的睡眠时间，避免过晚入睡|睡眠时长充足，质量良好，继续保持现有的睡眠习惯`;
 
         // 调用AI服务
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        const sessionData = {
+            title: `Sleep Analysis ${getCurrentDateTimeString()}`,
+            description: '睡眠数据分析',
+            ai_model: 'dashscope'
+        };
 
-        if (!aiResult.ok) {
-            console.error(`AI调用失败 (sleepRecordId: ${sleepRecordId}):`, aiResult.content);
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (!aiResult?.aiMessage) {
+            console.error(`AI调用失败 (sleepRecordId: ${sleepRecordId}):`, '无有效响应');
             return;
         }
 
         // 解析AI返回的数据
-        const analysisData = parseSleepAnalysis(aiResult.content);
+        const analysisData = parseSleepAnalysis(aiResult.aiMessage.content);
 
         // 更新数据库中的AI生成字段
         if (analysisData) {
@@ -161,7 +164,7 @@ async function generateSleepAnalysisAsync(
                 console.error('更新睡眠AI总结失败:', err)
             );
         } else {
-            console.warn(`无法解析睡眠分析数据 (sleepRecordId: ${sleepRecordId}), AI返回:`, aiResult.content);
+            console.warn(`无法解析睡眠分析数据 (sleepRecordId: ${sleepRecordId}), AI返回:`, aiResult.aiMessage?.content);
         }
     } catch (error) {
         console.error(`生成睡眠分析失败 (sleepRecordId: ${sleepRecordId}):`, error);
@@ -462,20 +465,23 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
 }
 
 async function calculateAISummary(summaryData: object,userId: number) {
-    // 在这里实现AI分析总结的计算逻辑
+    // 使用 AIChatService 处理 AI 分析总结
     try {
         const prompt = `请基于以下睡眠数据进行AI分析总结：
         ${JSON.stringify(summaryData, null, 2)}
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
     1.这是当天得到的睡眠数据，请分析并评价这些数据。`;
 
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        const sessionData = {
+            title: `Sleep Summary ${getCurrentDateTimeString()}`,
+            description: '睡眠数据AI总结',
+            ai_model: 'dashscope'
+        };
 
-        if (aiResult.ok) {
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (aiResult?.aiMessage) {
             const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
@@ -490,18 +496,18 @@ async function calculateAISummary(summaryData: object,userId: number) {
                 if ((existingRows as any[]).length > 0) {
                     await pool.query(
                         'UPDATE checkin_ai_summary SET sleep_ai_summary = ? WHERE daily_checkin_id = ?',
-                        [aiResult.content, dailyCheckinId]
+                        [aiResult.aiMessage.content, dailyCheckinId]
                     );
                 } else {
                     await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, sleep_ai_summary) VALUES (?, ?)',
-                        [dailyCheckinId, aiResult.content]
+                        [dailyCheckinId, aiResult.aiMessage.content]
                     );
                 }
                 console.log(`已更新AI分析总结 (daily_checkin_id: ${dailyCheckinId})`);
             }
         } else {
-            console.error('AI分析总结失败:', aiResult.content);
+            console.error('AI分析总结失败: 无有效响应');
         }
     } catch (error) {
         console.error('计算AI分析总结失败:', error);

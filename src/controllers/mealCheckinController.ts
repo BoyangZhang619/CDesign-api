@@ -3,7 +3,7 @@ import { sendError, sendResult } from "../util/response.js";
 import { Request, Response } from "express";
 import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
-import { commonChat } from "./aiController.js";
+import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq, getUserById } from "./sharedMethods.js";
 import { get } from "http";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
@@ -65,30 +65,33 @@ async function insertCheckInRecord(req: Request, res: Response): Promise<Respons
 async function calculateNutritionDataAsync(userId: number, mealRecordId: number, meal_type: string, food_source: string, food_name: string, food_detail: string) {
     try {
         // 构建AI请求内容
-        const prompt = `请根据以下食物信息计算营养成分：
+        const prompt = `[饮食健康信息的的数据内容处理与分析]请根据以下食物信息计算营养成分：
 食物名称: ${food_name}
 食物详情: ${food_detail}
 进食来源: ${food_source}
 进食时段: ${meal_type}
 
-请返回以下格式的数据(仅返回数字，单位为：热量kcal,蛋白质g,脂肪g,碳水g,纤维g,糖g,如果所有数据都为零，则强制使热量值为1)：
+请返回以下格式的数据(仅返回数字，单位为：热量kcal,蛋白质g,脂肪g,碳水g,纤维g,糖g,如果所有数据都为零，则强制使热量值为1，不必复述信息，不得额外输出内容，若备注内容无相关性请忽略)：
 格式: 热量|蛋白质|脂肪|碳水|纤维|糖
 示例: 500|20|15|60|5|10`;
 
         // 调用AI服务
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        const sessionData = {
+            title: `Nutrition Analysis ${getCurrentDateTimeString()}`,
+            description: '食物营养成分计算',
+            ai_model: 'dashscope'
+        };
 
-        if (!aiResult.ok) {
-            console.error(`AI调用失败 (mealRecordId: ${mealRecordId}):`, aiResult.content);
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (!aiResult?.aiMessage) {
+            console.error(`AI调用失败 (mealRecordId: ${mealRecordId}):`, '无有效响应');
             return;
         }
 
         // 解析AI返回的营养数据
-        const nutritionData = parseNutritionData(aiResult.content);
+        const nutritionData = parseNutritionData(aiResult.aiMessage.content);
 
         // 更新数据库中的营养信息
         if (nutritionData) {
@@ -112,7 +115,7 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
                 console.error('更新饮食AI总结失败:', err)
             );
         } else {
-            console.warn(`无法解析营养数据 (mealRecordId: ${mealRecordId}), AI返回:`, aiResult.content);
+            console.warn(`无法解析营养数据 (mealRecordId: ${mealRecordId}), AI返回:`, aiResult.aiMessage?.content);
         }
     } catch (error) {
         console.error(`计算营养数据失败 (mealRecordId: ${mealRecordId}):`, error);
@@ -270,7 +273,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
 }
 
 async function calculateAISummary(summaryData: object,userId: number) {
-    // 在这里实现AI分析总结的计算逻辑
+    // 使用 AIChatService 处理 AI 分析总结
     try {
         const prompt = `请基于以下营养摄入数据进行AI分析总结：
     热量: ${(summaryData as any).meal_calories} kcal
@@ -283,13 +286,16 @@ async function calculateAISummary(summaryData: object,userId: number) {
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
     1.这是当天得到的营养摄入数据，请分析并评价这些数据。`;
 
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        const sessionData = {
+            title: `Meal Summary ${getCurrentDateTimeString()}`,
+            description: '饮食数据AI总结',
+            ai_model: 'dashscope'
+        };
 
-        if (aiResult.ok) {
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (aiResult?.aiMessage) {
             const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
@@ -304,17 +310,17 @@ async function calculateAISummary(summaryData: object,userId: number) {
                 if ((existingRows as any[]).length > 0) {
                     await pool.query(
                         'UPDATE checkin_ai_summary SET meal_ai_summary = ? WHERE daily_checkin_id = ?',
-                        [aiResult.content, dailyCheckinId]
+                        [aiResult.aiMessage.content, dailyCheckinId]
                     );
                 } else {
                     await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, meal_ai_summary) VALUES (?, ?)',
-                        [dailyCheckinId, aiResult.content]
+                        [dailyCheckinId, aiResult.aiMessage.content]
                     );
                 }
             }
         } else {
-            console.error('AI分析总结失败:', aiResult.content);
+            console.error('AI分析总结失败: 无有效响应');
         }
     } catch (error) {
         console.error('计算AI分析总结失败:', error);

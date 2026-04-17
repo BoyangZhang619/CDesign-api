@@ -3,7 +3,7 @@ import { sendError, sendResult } from "../util/response.js";
 import { Request, Response } from "express";
 import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
 import { QueryResult } from "mysql2";
-import { commonChat } from "./aiController.js";
+import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
 
@@ -135,30 +135,34 @@ async function generateExerciseAnalysisAsync(
 ) {
     try {
         // 构建AI请求内容
-        const prompt = `请根据以下运动信息计算消耗热量并给出建议：
+        const prompt = `[运动健康信息的的数据内容处理与分析]请根据以下运动信息计算消耗热量并给出建议：
 运动类型: ${activityType}
 运动时长: ${durationMin}分钟
 运动强度: ${intensity ?? '未记录'}
 备注: ${note ?? '未记录'}
 
-请返回以下格式的数据（用|分隔,如果输入的结果都为零，则强制使热量值为1）：
+请返回以下格式的数据（用|分隔,如果输入的结果都为零，则强制使热量值为1，不必复述信息，不得额外输出内容，若备注内容无相关性请忽略）：
 格式: 消耗热量(kcal)|建议(简要文本，最多50字)|评价(简要文本，最多100字)
 示例: 250|保持规律运动习惯，建议逐步增加运动强度|运动时长充足，强度适中，效果显著`;
 
-        // 调用AI服务
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        // 调用AI服务 - 使用 AIChatService
+        const sessionData = {
+            title: `Exercise Analysis ${getCurrentDateTimeString()}`,
+            description: '运动打卡AI分析',
+            ai_model: 'dashscope'
+        };
+        
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
 
-        if (!aiResult.ok) {
-            console.error(`AI调用失败 (exerciseRecordId: ${exerciseRecordId}):`, aiResult.content);
+        if (!aiResult?.aiMessage) {
+            console.error(`AI调用失败 (exerciseRecordId: ${exerciseRecordId}): 无有效响应`);
             return;
         }
 
         // 解析AI返回的数据
-        const analysisData = parseExerciseAnalysis(aiResult.content);
+        const aiContent = aiResult.aiMessage.content;
+        const analysisData = parseExerciseAnalysis(aiContent);
 
         // 更新数据库中的AI生成字段
         if (analysisData) {
@@ -179,7 +183,7 @@ async function generateExerciseAnalysisAsync(
                 console.error('更新运动AI总结失败:', err)
             );
         } else {
-            console.warn(`无法解析运动分析数据 (exerciseRecordId: ${exerciseRecordId}), AI返回:`, aiResult.content);
+            console.warn(`无法解析运动分析数据 (exerciseRecordId: ${exerciseRecordId}), AI返回:`, aiContent);
         }
     } catch (error) {
         console.error(`生成运动分析失败 (exerciseRecordId: ${exerciseRecordId}):`, error);
@@ -509,20 +513,23 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
 }
 
 async function calculateAISummary(summaryData: object,userId: number) {
-    // 在这里实现AI分析总结的计算逻辑
+    // 使用 AIChatService 处理 AI 分析总结
     try {
         const prompt = `请基于以下运动数据进行AI分析总结：
         ${JSON.stringify(summaryData)}
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
     1.这是当天得到的运动数据，请分析并评价这些数据。`;
 
-        const aiResult = await commonChat({
-            user_content: prompt,
-            model: 'qwen3.5-flash',
-            response_type: 'text'
-        });
+        const sessionData = {
+            title: `Exercise Summary ${getCurrentDateTimeString()}`,
+            description: '运动数据AI总结',
+            ai_model: 'dashscope'
+        };
 
-        if (aiResult.ok) {
+        const session = await AIChatService.createSession(userId, sessionData);
+        const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
+
+        if (aiResult?.aiMessage) {
             const dailyCheckinId = (await pool.query(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
@@ -537,17 +544,17 @@ async function calculateAISummary(summaryData: object,userId: number) {
                 if ((existingRows as any[]).length > 0) {
                     await pool.query(
                         'UPDATE checkin_ai_summary SET exercise_ai_summary = ?, is_exercise_summary_updated = 1 WHERE daily_checkin_id = ?',
-                        [aiResult.content, dailyCheckinId]
+                        [aiResult.aiMessage.content, dailyCheckinId]
                     );
                 } else {
                     await pool.query(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, exercise_ai_summary, is_exercise_summary_updated) VALUES (?, ?, 1)',
-                        [dailyCheckinId, aiResult.content]
+                        [dailyCheckinId, aiResult.aiMessage.content]
                     );
                 }
             }
         } else {
-            console.error('AI分析总结失败:', aiResult.content);
+            console.error('AI分析总结失败: 无有效响应');
         }
     } catch (error) {
         console.error('计算AI分析总结失败:', error);

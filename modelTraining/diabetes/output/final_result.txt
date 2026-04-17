@@ -1,8 +1,8 @@
 ============================================================
-DIABETES DATASET ANALYSIS REPORT
+糖尿病数据集分析报告
 ============================================================
 
-1) DATASET OVERVIEW & QUALITY SCORES
+1) 数据集概览与质量评分
 ------------------------------------------------------------
 
 Dataset: diabetes_012
@@ -23,7 +23,7 @@ Dataset: diabetes_binary_full
   Outlier Ratio: 1.78%
   QUALITY SCORE: 97.9/100
 
-2) TARGET DISTRIBUTION & CLASS BALANCE
+2) 目标变量分布与类别平衡
 ------------------------------------------------------------
 
 diabetes_012:
@@ -39,7 +39,7 @@ diabetes_binary_full:
   Class 0.0 →   218334 samples (86.07%)
   Class 1.0 →    35346 samples (13.93%)
 
-3) FEATURE-TARGET CORRELATION (Top 15)
+3) 特征-目标相关性 (前15个)
 ------------------------------------------------------------
 
 diabetes_012:
@@ -93,7 +93,7 @@ diabetes_binary_full:
              CholCheck corr= 0.0648 (p=7.51e-234) ***
                 Smoker corr= 0.0608 (p=3.05e-206) ***
 
-4) FEATURE VARIANCE STABILITY (Top 10 unstable)
+4) 特征方差稳定性 (前10个不稳定特征)
 ------------------------------------------------------------
 
 diabetes_012:
@@ -132,11 +132,11 @@ diabetes_binary_full:
                    BMI stability_ratio=1.0739, max_class_var=54.2197
              Education stability_ratio=1.0571, max_class_var=1.1249
 
-5) MISSING VALUES (if any)
+5) 缺失值 (如有)
 ------------------------------------------------------------
 No missing values detected in any dataset.
 
-6) OUTLIER DETECTION (IQR Method, Top 10)
+6) 异常值检测 (IQR方法, 前10个)
 ------------------------------------------------------------
   diabetes_binary_full.        PhysActivity outlier_ratio=24.35%, mean=0.7565, std=0.4292
   diabetes_012.        PhysActivity outlier_ratio=24.35%, mean=0.7565, std=0.4292
@@ -149,7 +149,7 @@ No missing values detected in any dataset.
   diabetes_012.            PhysHlth outlier_ratio=16.14%, mean=4.2421, std=8.7180
   diabetes_binary_full.            PhysHlth outlier_ratio=16.14%, mean=4.2421, std=8.7180
 
-7) KEY INSIGHTS & RECOMMENDATIONS
+7) 关键洞察与建议
 ------------------------------------------------------------
 Best quality dataset: diabetes_binary_5050 (score: 99.4/100)
 - Use binary_5050 split for balanced model training (addresses class imbalance).
