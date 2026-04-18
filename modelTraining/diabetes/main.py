@@ -637,20 +637,20 @@ def main() -> None:
     engineered_features_df = engineered_features_preview(datasets)
 
     # Save all result CSVs
-    overview_df.to_csv(OUTPUT_DIR / "dataset_overview.csv", index=False)
-    col_profile_df.to_csv(OUTPUT_DIR / "column_profile.csv", index=False)
-    missing_df.to_csv(OUTPUT_DIR / "missingness_report.csv", index=False)
-    target_df.to_csv(OUTPUT_DIR / "target_balance.csv", index=False)
-    schema_df.to_csv(OUTPUT_DIR / "dataset_comparison.csv", index=False)
-    numeric_df.to_csv(OUTPUT_DIR / "numeric_summary_outliers.csv", index=False)
-    quality_df.to_csv(OUTPUT_DIR / "data_quality_scores.csv", index=False)
-    grouped_stats_df.to_csv(OUTPUT_DIR / "target_grouped_statistics.csv", index=False)
-    corr_df.to_csv(OUTPUT_DIR / "feature_target_correlations.csv", index=False)
-    variance_df.to_csv(OUTPUT_DIR / "feature_variance_analysis.csv", index=False)
-    importance_df.to_csv(OUTPUT_DIR / "feature_importance_ranking.csv", index=False)
-    distribution_df.to_csv(OUTPUT_DIR / "feature_distribution_comparison.csv", index=False)
-    multicollinearity_df.to_csv(OUTPUT_DIR / "feature_multicollinearity.csv", index=False)
-    engineered_features_df.to_csv(OUTPUT_DIR / "engineered_features_preview.csv", index=False)
+    overview_df.to_excel(OUTPUT_DIR / "dataset_overview.xlsx", index=False)
+    col_profile_df.to_excel(OUTPUT_DIR / "column_profile.xlsx", index=False)
+    missing_df.to_excel(OUTPUT_DIR / "missingness_report.xlsx", index=False)
+    target_df.to_excel(OUTPUT_DIR / "target_balance.xlsx", index=False)
+    schema_df.to_excel(OUTPUT_DIR / "dataset_comparison.xlsx", index=False)
+    numeric_df.to_excel(OUTPUT_DIR / "numeric_summary_outliers.xlsx", index=False)
+    quality_df.to_excel(OUTPUT_DIR / "data_quality_scores.xlsx", index=False)
+    grouped_stats_df.to_excel(OUTPUT_DIR / "target_grouped_statistics.xlsx", index=False)
+    corr_df.to_excel(OUTPUT_DIR / "feature_target_correlations.xlsx", index=False)
+    variance_df.to_excel(OUTPUT_DIR / "feature_variance_analysis.xlsx", index=False)
+    importance_df.to_excel(OUTPUT_DIR / "feature_importance_ranking.xlsx", index=False)
+    distribution_df.to_excel(OUTPUT_DIR / "feature_distribution_comparison.xlsx", index=False)
+    multicollinearity_df.to_excel(OUTPUT_DIR / "feature_multicollinearity.xlsx", index=False)
+    engineered_features_df.to_excel(OUTPUT_DIR / "engineered_features_preview.xlsx", index=False)
 
     # Generate reports
     write_report(
@@ -672,8 +672,8 @@ def main() -> None:
     )
 
     print("✓ 分析完成。输出保存至:", OUTPUT_DIR)
-    print(f"\n生成的CSV文件:")
-    for csv_file in sorted(OUTPUT_DIR.glob("*.csv")):
+    print(f"\n生成的XLSX文件:")
+    for csv_file in sorted(OUTPUT_DIR.glob("*.xlsx")):
         print(f"  - {csv_file.name}")
     print(f"\n生成的报告文件:")
     for txt_file in sorted(OUTPUT_DIR.glob("*.txt")):

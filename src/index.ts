@@ -26,6 +26,9 @@ import { getCurrentDateTimeString } from './util/dateTime.js';
 const fixedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://192.168.1.4:5173',
+    'http://192.168.1.4:5174',
+    'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
     'https://localhost'
 ];
