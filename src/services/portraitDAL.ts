@@ -32,6 +32,14 @@ export interface UserProfileData {
   healthGoals?: string;
   createdAt: Date;
   updatedAt: Date;
+  diseases?: string; // 新增疾病史字段
+  remark?: string; // 新增备注字段
+  height?: number; // 兼容旧字段
+  currentWeight?: number; // 兼容旧字段
+  targetWeight?: number; // 兼容旧字段
+  dietPreferences?: string; // 兼容旧字段
+  sleepHabit?: string; // 兼容旧字段
+  goalOtherText?: string; // 兼容旧字段
 }
 
 export class PortraitDAL {
@@ -99,21 +107,6 @@ export class PortraitDAL {
         metabolism, metabolism_status, sleep_quality, sleep_quality_status,
         radar_data
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        exercise_score = VALUES(exercise_score),
-        meal_score = VALUES(meal_score),
-        sleep_score = VALUES(sleep_score),
-        overall_score = VALUES(overall_score),
-        bmi = VALUES(bmi),
-        bmi_status = VALUES(bmi_status),
-        cardio_level = VALUES(cardio_level),
-        cardio_status = VALUES(cardio_status),
-        metabolism = VALUES(metabolism),
-        metabolism_status = VALUES(metabolism_status),
-        sleep_quality = VALUES(sleep_quality),
-        sleep_quality_status = VALUES(sleep_quality_status),
-        radar_data = VALUES(radar_data),
-        updated_at = CURRENT_TIMESTAMP
     `;
 
     try {
@@ -311,7 +304,9 @@ export class PortraitDAL {
         created_at as createdAt,
         updated_at as updatedAt
       FROM user_profile
+      ORDER BY created_at DESC
       WHERE user_id = ?
+      LIMIT 1
     `;
 
     try {
@@ -379,25 +374,21 @@ export class PortraitDAL {
       updates.push('age = ?');
       values.push(profileData.age || null);
     }
-    if (profileData.heightCm !== undefined) {
+    if (profileData.heightCm !== undefined || profileData?.height !== undefined) {
       updates.push('height_cm = ?');
-      values.push(profileData.heightCm || null);
+      values.push(profileData.heightCm || profileData?.height || null);
     }
-    if (profileData.currentWeightKg !== undefined) {
+    if (profileData.currentWeightKg !== undefined || profileData?.currentWeight !== undefined) {
       updates.push('current_weight_kg = ?');
-      values.push(profileData.currentWeightKg || null);
+      values.push(profileData.currentWeightKg || profileData?.currentWeight || null);
     }
-    if (profileData.targetWeightKg !== undefined) {
+    if (profileData.targetWeightKg !== undefined || profileData?.targetWeight !== undefined) {
       updates.push('target_weight_kg = ?');
-      values.push(profileData.targetWeightKg || null);
+      values.push(profileData.targetWeightKg || profileData?.targetWeight || null);
     }
-    if (profileData.goalType !== undefined) {
-      updates.push('goal_type = ?');
-      values.push(profileData.goalType || null);
-    }
-    if (profileData.dietaryPreferences !== undefined) {
+    if (profileData.dietaryPreferences !== undefined || profileData?.dietPreferences !== undefined) {
       updates.push('dietary_preferences = ?');
-      values.push(profileData.dietaryPreferences || null);
+      values.push(profileData.dietaryPreferences || JSON.stringify(profileData?.dietPreferences) || null);
     }
     if (profileData.allergies !== undefined) {
       updates.push('allergies = ?');
@@ -412,20 +403,40 @@ export class PortraitDAL {
       values.push(profileData.activityLevel || null);
     }
     if (profileData.healthGoals !== undefined) {
+      updates.push('goal_type = ?');
+      values.push(JSON.stringify(profileData.healthGoals) || null);
+    }
+    if (profileData.diseases !== undefined) {
+      updates.push('diseases = ?');
+      values.push(profileData.diseases || null);
+    }
+    if (profileData.remark !== undefined) {
+      updates.push('remark = ?');
+      values.push(profileData.remark || null);
+    }
+    if (profileData.sleepHabit !== undefined) {
+      updates.push('sleep_habit = ?');
+      values.push(profileData.sleepHabit || null);
+    }
+    if (profileData.goalOtherText !== undefined) {
+      updates.push('goal_other_text = ?');
+      values.push(profileData.goalOtherText || null);
+    }
+    if (profileData.healthGoals !== undefined) {
       updates.push('health_goals = ?');
-      values.push(profileData.healthGoals || null);
+      values.push(JSON.stringify(profileData.healthGoals) || null);
     }
 
     if (updates.length === 0) {
       throw new Error('没有字段需要更新');
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
-    const query = `UPDATE user_profile SET ${updates.join(', ')} WHERE user_id = ?`;
-    values.push(userId);
+    // const query = `UPDATE user_profile SET ${updates.join(', ')} WHERE user_id = ?`;
+    const query = `INSERT INTO user_profile (user_id, ${updates.map(u => u.split(' = ')[0]).join(', ')}) VALUES (?, ${values.map(() => '?').join(', ')})`;
+    values.unshift(userId);
 
     try {
-      console.log('[PortraitDAL.updateUserProfile] 更新用户档案:', userId);
+      console.log('[PortraitDAL.updateUserProfile] 更新(插入新的)用户档案:', userId, query);
       await pool.query(query, values);
 
       // 查询更新后的数据
@@ -451,9 +462,12 @@ export class PortraitDAL {
         target_weight_kg as targetWeightKg, goal_type as goalType,
         dietary_preferences as dietaryPreferences, allergies,
         work_rest_habit as workRestHabit, activity_level as activityLevel,
-        health_goals as healthGoals, created_at as createdAt, updated_at as updatedAt
+        health_goals as healthGoals, created_at as createdAt, updated_at as updatedAt,
+        diseases, remark
       FROM user_profile
       WHERE user_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
     `;
 
     try {
@@ -520,7 +534,7 @@ export class PortraitDAL {
         SELECT 
           task_title, task_type, task_priority, completion_date, 
           completion_time
-        FROM task_completion_record
+        FROM task_completion_records
         WHERE user_id = ? 
           AND DATE(completion_date) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
           AND DATE(completion_date) < DATE_SUB(CURDATE(), INTERVAL ? DAY)

@@ -28,6 +28,7 @@ const fixedOrigins = [
     'http://localhost:5174',
     'http://192.168.1.4:5173',
     'http://192.168.1.4:5174',
+    'http://172.27.51.67:5173',
     'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
     'https://localhost'
