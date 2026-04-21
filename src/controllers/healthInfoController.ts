@@ -94,12 +94,12 @@ async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
 
     // 将逗号分隔的字符串转换回数组
     if (healthInfo.dietary_preferences && typeof healthInfo.dietary_preferences === 'string') {
-        // healthInfo.dietary_preferences = healthInfo.dietary_preferences.split(',').filter((v: string) => v.trim());
-        healthInfo.dietary_preferences = JSON.parse(healthInfo.dietary_preferences);
+        healthInfo.dietary_preferences = healthInfo.dietary_preferences.split(',').filter((v: string) => v.trim());
+        // healthInfo.dietary_preferences = JSON.parse(healthInfo.dietary_preferences);
     }
     if (healthInfo.health_goals && typeof healthInfo.health_goals === 'string') {
-        // healthInfo.health_goals = healthInfo.health_goals.split(',').filter((v: string) => v.trim());
-        healthInfo.health_goals = JSON.parse(healthInfo.health_goals);
+        healthInfo.health_goals = healthInfo.health_goals.split(',').filter((v: string) => v.trim());
+        // healthInfo.health_goals = JSON.parse(healthInfo.health_goals);
     }
 
     return sendResult(res, {
