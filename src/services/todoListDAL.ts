@@ -177,19 +177,18 @@ export class TodoListDAL {
         const offset = (page - 1) * limit;
 
         // 如果没有指定日期，使用当前东八区日期（重要：修复时区问题）
-        // const queryDate = date || getCurrentDateString();
-        let queryDate = date || null;
+        const queryDate = date || getCurrentDateString();
 
         // 诊断：检查该用户是否有任何任务
         const diagnosticQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ?';
         const [diagnosticResult] = await pool.query(diagnosticQuery, [userId]) as any;
-        console.log(`🔍 [诊断] 用户 ${userId} 在数据库中的总任务数: ${diagnosticResult[0].total}`);
+        console.log(`🔍 [诊断] 用户 ${userId} 在数据库中的总任务数: ${diagnosticResult[0].total}，查询日期：${queryDate}`);
 
         // 诊断：检查该日期的任务
-        const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? ' + (queryDate ? 'AND due_date = ?' : '');
+        const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? AND due_date = ?';
 
         const [dateCheckResult] = await pool.query(dateCheckQuery, [userId, queryDate]) as any;
-        console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total},dateCheckQuery:${dateCheckQuery},`);
+        console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total}`);
 
         // 诊断：打印所有任务
         const allTasksQuery = 'SELECT id, user_id, title, due_date, status FROM tasks WHERE user_id = ? LIMIT 10';
@@ -281,13 +280,9 @@ export class TodoListDAL {
             const dateType = task.date_type || 'tomorrow';
             if (dateType !== 'tomorrow') {
                 // 非 tomorrow 类型的循环任务需要检查该日是否有完成记录
-                if (!queryDate) {
-                    // 如果没有指定查询日期，使用当前东八区日期（重要：修复时区问题）
-                    queryDate = getCurrentDateString();
-                }
                 if (!isTimeFit(dateType, queryDate)) {
-                        console.log(`⏭️ 任务 ${task.id} 的 date_type 是 ${dateType}，但查询日期 ${queryDate} 不符合时间条件，设置已完成`);
-                        continue; // 跳过该任务，不加入返回列表
+                    console.log(`⏭️ 任务 ${task.id} 的 date_type 是 ${dateType}，但查询日期 ${queryDate} 不符合时间条件，设置已完成`);
+                    continue; // 跳过该任务，不加入返回列表
                 }
                 const checkQuery = `
                     SELECT COUNT(*) as count FROM task_completion_records 

@@ -356,6 +356,7 @@ export class AIChatController {
           userId,
           sessionId,
           content,
+          req,
           (chunk: string) => {
             // 每接收到数据块就发送给客户端
             console.log('[sendMessageStream] 发送 chunk 事件，内容长度:', chunk.length);
@@ -425,6 +426,7 @@ export class AIChatController {
           userId,
           sessionId,
           content,
+          req,
           (chunk: string) => {
             res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
           }

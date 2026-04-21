@@ -370,6 +370,7 @@ export class AIChatService {
     userId: number,
     sessionId: number,
     content: string,
+    req: any, // 传递 req 对象以获取请求相关信息（如 headers）
     onChunk: (chunk: string) => void
   ): Promise<{ userMessageId: number; aiMessageId: number; totalTokens: number }> {
     // 1. 验证内容
@@ -410,6 +411,7 @@ export class AIChatService {
         content,
         chatHistory,
         onChunk,
+        req,
         (tokens) => {
           totalOutputTokens = tokens;
         },
@@ -470,6 +472,7 @@ export class AIChatService {
     session: any,
     userMessage: string,
     chatHistory: any[],
+    req: any, // 传递 req 对象以获取请求相关信息（如 headers）
     onChunk: (chunk: string) => void,
     onTokens: (tokens: number) => void,
     onContent: (content: string) => void,
@@ -478,7 +481,7 @@ export class AIChatService {
     const model = session.ai_model || 'dashscope';
 
     if (model === 'dashscope') {
-      return this.callDashScopeStream(session, userMessage, chatHistory, onChunk, onTokens, onContent, onSessionId);
+      return this.callDashScopeStream(session, userMessage, chatHistory, req, onChunk, onTokens, onContent, onSessionId);
     } else if (model === 'gpt-4' || model === 'gpt-3.5-turbo') {
       throw new Error('OpenAI 流式支持开发中');
     } else {
@@ -493,6 +496,7 @@ export class AIChatService {
     session: any,
     userMessage: string,
     chatHistory: any[],
+    req: any, // 传递 req 对象以获取请求相关信息（如 headers）
     onChunk: (chunk: string) => void,
     onTokens: (tokens: number) => void,
     onContent: (content: string) => void,
@@ -518,7 +522,8 @@ export class AIChatService {
       parameters: {
         flow_stream_mode: 'message_format', // 推荐使用，能获得结构化的流式返回
         temperature: session.temperature || 0.7,
-        max_tokens: session.max_tokens || 2048
+        max_tokens: session.max_tokens || 2048,
+        access_token: req.headers.authorization
       }
     };
 
