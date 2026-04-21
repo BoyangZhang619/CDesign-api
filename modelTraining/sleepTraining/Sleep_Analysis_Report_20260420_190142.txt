@@ -1,0 +1,36 @@
+数据加载成功: ./csv/wearable_tech_sleep_quality.csv | 总样本量: 1000
+分组完成: 有咖啡因组 (924 样本) VS 无咖啡因组 (76 样本)
+
+==================== [【实验组】摄入咖啡因人群 (>0mg)] 深度数据分析 ====================
+➤ 目标指标 [Sleep_Quality_Score] 概况:
+   - 均值: 1.99 | 标准差: 2.20
+➤ 各特征对 [Sleep_Quality_Score] 的线性影响系数 (Pearson):
+   - Sleep_Duration_Hours     :   0.06 (弱正相关)
+   - Heart_Rate_Variability   :   0.02 (弱正相关)
+   - Light_Exposure_hours     :   0.02 (弱正相关)
+   - Body_Temperature         :  -0.02 (弱负相关)
+   - Movement_During_Sleep    :  -0.04 (弱负相关)
+   - Stress_Level             :  -0.06 (弱负相关)
+   - Bedtime_Consistency      :  -0.07 (弱负相关)
+   - Caffeine_Intake_mg       :  -0.64 (强负相关)
+➤ 核心变量的客观表现 (均值/波动范围):
+   - Stress_Level             : 均值 4.93 [极值: 0.0 ~ 10.0]
+   - Sleep_Duration_Hours     : 均值 7.47 [极值: 3.1 ~ 12.4]
+   - Heart_Rate_Variability   : 均值 70.27 [极值: 5.2 ~ 147.1]
+
+==================== [【对照组】零咖啡因人群 (0mg)] 深度数据分析 ====================
+➤ 目标指标 [Sleep_Quality_Score] 概况:
+   - 均值: 9.90 | 标准差: 0.23
+➤ 各特征对 [Sleep_Quality_Score] 的线性影响系数 (Pearson):
+   - Sleep_Duration_Hours     :   0.39 (中正相关)
+   - Body_Temperature         :   0.11 (弱正相关)
+   - Light_Exposure_hours     :   0.03 (弱正相关)
+   - Bedtime_Consistency      :   0.01 (弱正相关)
+   - Heart_Rate_Variability   :   0.01 (弱正相关)
+   - Movement_During_Sleep    :  -0.30 (中负相关)
+   - Stress_Level             :  -0.49 (中负相关)
+   - Caffeine_Intake_mg       :    nan (弱负相关)
+➤ 核心变量的客观表现 (均值/波动范围):
+   - Stress_Level             : 均值 5.03 [极值: 0.0 ~ 10.0]
+   - Sleep_Duration_Hours     : 均值 7.47 [极值: 3.9 ~ 10.9]
+   - Heart_Rate_Variability   : 均值 71.79 [极值: 17.0 ~ 120.5]

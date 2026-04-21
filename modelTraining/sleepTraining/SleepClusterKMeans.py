@@ -13,6 +13,7 @@ df = pd.read_csv(os.path.join(cur_path, './csv/wearable_tech_sleep_quality.csv')
 # 2. 数据标准化 (非常重要！)
 scaler = StandardScaler()
 scaled_data = scaler.fit_transform(df)
+print(scaled_data[:20])
 
 # 3. 使用肘部法（Elbow Method）找最佳聚类数 K
 xLimit = 20

@@ -4,7 +4,7 @@ import { sendError } from '../util/response.js';
 
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
-    console.log('🔐 [authMiddleware] 检查授权头:', authHeader ? '✅ 存在' : '❌ 缺失');
+    console.log('🔐 [authMiddleware] 检查授权头:', authHeader ? '✅ 存在' : '❌ 缺失',authHeader);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.error('❌ [authMiddleware] 缺失或无效的授权头:', authHeader);
