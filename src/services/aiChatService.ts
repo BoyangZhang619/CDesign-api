@@ -189,9 +189,9 @@ export class AIChatService {
       case 'dashscope':
       case 'dashscope_ai_agent':
         return this.callDashScope(session, userMessage, chatHistory);
-    //   case 'gpt-4':
-    //   case 'gpt-3.5-turbo':
-    //     return this.callOpenAI(session, userMessage, chatHistory);
+      //   case 'gpt-4':
+      //   case 'gpt-3.5-turbo':
+      //     return this.callOpenAI(session, userMessage, chatHistory);
       default:
         throw new Error(`不支持的 AI 模型类型: ${modelType}`);
     }
@@ -506,7 +506,7 @@ export class AIChatService {
     const apiKey = process.env.DASHSCOPE_API_KEY;
     const appId = session.ai_app_id || process.env.AI_AGENT_APP_ID;
     const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
-    const authInfo = req.headers.authorization
+    const authInfo = req.headers.authorization.split(' ')[1]; // 提取 Bearer token 作为访问令牌
 
     // 构建请求体（DashScope 的流式模式）
     // 根据官方文档，三种流式输出模式：
@@ -517,17 +517,19 @@ export class AIChatService {
     // 我们使用 message_format，它能在最后返回完整的 text 内容
     console.log('[callDashScopeStream] auth:', authInfo);
     const requestBody = {
-      input: { 
+      input: {
         prompt: userMessage,
         // 如果已有 session_id，传递用于维持对话上下文（多轮对话记忆）
         ...(session.dashscope_session_id && { session_id: session.dashscope_session_id }),
-        access_token: req.headers.authorization // 传递用户访问令牌以便 DashScope 进行权限验证和计费归属
+        biz_params: {
+          access_token: authInfo
+        }
       },
       parameters: {
         flow_stream_mode: 'message_format', // 推荐使用，能获得结构化的流式返回
         temperature: session.temperature || 0.7,
-        max_tokens: session.max_tokens || 2048
-      }
+        max_tokens: session.max_tokens || 2048,
+      },
     };
 
     try {
@@ -536,7 +538,7 @@ export class AIChatService {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'X-DashScope-SSE': 'enable' // 启用 SSE 流式响应
+          'X-DashScope-SSE': 'enable', // 启用 SSE 流式响应
         },
         body: JSON.stringify(requestBody)
       });
@@ -567,17 +569,17 @@ export class AIChatService {
         // SSE 格式：data: {json}\n\n
         // 按换行符分割，逐行处理
         const lines = buffer.split('\n');
-        
+
         // 保留最后一个不完整的行
         buffer = lines.pop() || '';
 
         for (const line of lines) {
           const trimmedLine = line.trim();
-          
+
           // SSE 流式格式检查：data: {json}
           if (trimmedLine.startsWith('data:')) {
             const data = trimmedLine.slice(5).trim();
-            
+
             // 跳过空行和心跳
             if (!data || data === ':') {
               continue;
@@ -586,7 +588,7 @@ export class AIChatService {
             try {
               const json = JSON.parse(data);
               console.log('[callDashScopeStream] 收到 DashScope 响应:', JSON.stringify(json).substring(0, 100));
-              
+
               // 最后一块会包含完整的 text 字段
               if (json.output?.text) {
                 chunkCount++;
@@ -629,7 +631,7 @@ export class AIChatService {
           try {
             console.log('[callDashScopeStream] 处理缓冲区剩余数据');
             const json = JSON.parse(data);
-            
+
             if (json.output?.text) {
               chunkCount++;
               console.log('[callDashScopeStream] 从缓冲区调用 onChunk，内容长度:', json.output.text.length);
