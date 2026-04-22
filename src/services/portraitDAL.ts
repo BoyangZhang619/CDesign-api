@@ -107,6 +107,20 @@ export class PortraitDAL {
         metabolism, metabolism_status, sleep_quality, sleep_quality_status,
         radar_data
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+        exercise_score = VALUES(exercise_score),
+        meal_score = VALUES(meal_score),
+        sleep_score = VALUES(sleep_score),
+        overall_score = VALUES(overall_score),
+        bmi = VALUES(bmi),
+        bmi_status = VALUES(bmi_status),
+        cardio_level = VALUES(cardio_level),
+        cardio_status = VALUES(cardio_status),
+        metabolism = VALUES(metabolism),
+        metabolism_status = VALUES(metabolism_status),
+        sleep_quality = VALUES(sleep_quality),
+        sleep_quality_status = VALUES(sleep_quality_status),
+        radar_data = VALUES(radar_data)
     `;
 
     try {
@@ -304,8 +318,8 @@ export class PortraitDAL {
         created_at as createdAt,
         updated_at as updatedAt
       FROM user_profile
+      WHERE user_id = ? 
       ORDER BY created_at DESC
-      WHERE user_id = ?
       LIMIT 1
     `;
 

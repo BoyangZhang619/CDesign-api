@@ -37,8 +37,6 @@ async function getHistory(req: Request, res: Response): Promise<Response> {
     try {
         const {
             type = '',
-            startDate = '',
-            endDate = '',
             search = '',
             sort = 'newest',
             page = '1',
@@ -54,8 +52,8 @@ async function getHistory(req: Request, res: Response): Promise<Response> {
         const records = await getHistoryRecords(
             userId,
             type as string,
-            startDate as string,
-            endDate as string,
+            undefined,
+            undefined,
             search as string,
             sort as string,
             offset,
@@ -66,8 +64,8 @@ async function getHistory(req: Request, res: Response): Promise<Response> {
         const total = await getHistoryRecordsCount(
             userId,
             type as string,
-            startDate as string,
-            endDate as string,
+            undefined,
+            undefined,
             search as string
         );
 
