@@ -20,6 +20,7 @@ import type {
   FinishReason
 } from '../types/aiChat.js';
 import { ContentType as ContentTypeEnum, FinishReason as FinishReasonEnum, MessageRole as MessageRoleEnum } from '../types/aiChat.js';
+import { access } from 'fs';
 
 export class AIChatService {
   /**
@@ -410,8 +411,8 @@ export class AIChatService {
         session,
         content,
         chatHistory,
-        onChunk,
         req,
+        onChunk,
         (tokens) => {
           totalOutputTokens = tokens;
         },
@@ -505,6 +506,7 @@ export class AIChatService {
     const apiKey = process.env.DASHSCOPE_API_KEY;
     const appId = session.ai_app_id || process.env.AI_AGENT_APP_ID;
     const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
+    const authInfo = req.headers.authorization
 
     // 构建请求体（DashScope 的流式模式）
     // 根据官方文档，三种流式输出模式：
@@ -513,17 +515,18 @@ export class AIChatService {
     // 3. agent_format - 直接在 text 字段中流式返回节点输出
     // 
     // 我们使用 message_format，它能在最后返回完整的 text 内容
+    console.log('[callDashScopeStream] auth:', authInfo);
     const requestBody = {
       input: { 
         prompt: userMessage,
         // 如果已有 session_id，传递用于维持对话上下文（多轮对话记忆）
-        ...(session.dashscope_session_id && { session_id: session.dashscope_session_id })
+        ...(session.dashscope_session_id && { session_id: session.dashscope_session_id }),
+        access_token: req.headers.authorization // 传递用户访问令牌以便 DashScope 进行权限验证和计费归属
       },
       parameters: {
         flow_stream_mode: 'message_format', // 推荐使用，能获得结构化的流式返回
         temperature: session.temperature || 0.7,
-        max_tokens: session.max_tokens || 2048,
-        access_token: req.headers.authorization
+        max_tokens: session.max_tokens || 2048
       }
     };
 
