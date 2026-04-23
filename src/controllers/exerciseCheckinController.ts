@@ -6,6 +6,7 @@ import { QueryResult } from "mysql2";
 import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
+import { getAISummary as getTotalAISummary } from "./dailyCheckinController.js";
 
 // 验证运动时间合理性
 function validateExerciseTime(startTime: string, endTime: string): { valid: boolean; message: string } {
@@ -113,10 +114,11 @@ async function insertExerciseRecord(req: Request, res: Response): Promise<Respon
             message: '运动记录已保存',
             status: 'pending_ai_analysis'
         };
-        sendResult(res, response);
 
-        // 后台异步调用AI生成热量、建议和评价
-        generateExerciseAnalysisAsync(userId, exerciseRecordId, activity_type, durationMin, intensity, note);
+        await getTotalAISummary(req, res).then(() => {
+            generateExerciseAnalysisAsync(userId, exerciseRecordId, activity_type, durationMin, intensity, note);
+        });
+        sendResult(res, response);
 
         return res;
     } catch (error) {

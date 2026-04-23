@@ -7,6 +7,7 @@ import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq, getUserById } from "./sharedMethods.js";
 import { get } from "http";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
+import { getAISummary as getTotalAISummary } from "./dailyCheckinController.js";
 
 // 插入新的当前日期的打卡记录
 async function insertCheckInRecord(req: Request, res: Response): Promise<Response> {
@@ -50,10 +51,11 @@ async function insertCheckInRecord(req: Request, res: Response): Promise<Respons
             message: '打卡记录已保存',
             status: 'pending_ai_analysis'
         };
-        sendResult(res, response);
 
-        // 后台异步调用AI计算营养数据
-        calculateNutritionDataAsync(userId, mealRecordId, meal_type, food_source, food_name, food_detail);
+        await getTotalAISummary(req, res).then(() => {
+            calculateNutritionDataAsync(userId, mealRecordId, meal_type, food_source, food_name, food_detail);
+        });
+        sendResult(res, response);
 
         return res;
     } catch (error) {
@@ -111,9 +113,10 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
             console.log(`已更新meal记录 ${mealRecordId} 的营养数据:`, nutritionData);
 
             // 触发更新饮食总结（异步，不阻塞）
-            updateMealAISummary(userId).catch(err => 
+            updateMealAISummary(userId).catch(err =>
                 console.error('更新饮食AI总结失败:', err)
             );
+
         } else {
             console.warn(`无法解析营养数据 (mealRecordId: ${mealRecordId}), AI返回:`, aiResult.aiMessage?.content);
         }
@@ -128,7 +131,7 @@ function parseNutritionData(aiResponse: string): any {
         // 处理 "热量|蛋白质|脂肪|碳水|纤维|糖" 格式
         // 先尝试匹配 "数字|数字|数字|数字|数字|数字" 的格式
         const pipeFormatMatch = aiResponse.match(/(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)\s*\|\s*(\d+(?:\.\d+)?)/);
-        
+
         if (pipeFormatMatch) {
             return {
                 calories: parseFloat(pipeFormatMatch[1]),
@@ -152,7 +155,7 @@ function parseNutritionData(aiResponse: string): any {
                 sugar_g: parseFloat(numbers[5])
             };
         }
-        
+
         return null;
     } catch (error) {
         console.error('解析营养数据失败:', error);
@@ -272,19 +275,52 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
     }
 }
 
-async function calculateAISummary(summaryData: object,userId: number) {
+async function calculateAISummary(summaryData: object, userId: number) {
     // 使用 AIChatService 处理 AI 分析总结
     try {
-        const prompt = `请基于以下营养摄入数据进行AI分析总结：
-    热量: ${(summaryData as any).meal_calories} kcal
-    蛋白质: ${(summaryData as any).meal_protein} g
-    脂肪: ${(summaryData as any).meal_fat} g
-    碳水: ${(summaryData as any).meal_carbohydrate} g
-    纤维: ${(summaryData as any).meal_fiber} g
-    糖: ${(summaryData as any).meal_sugar} g
+        // 从 summaryData 获取当日打卡的详细记录
+        const records = (summaryData as any).records || [];
 
-    请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
-    1.这是当天得到的营养摄入数据，请分析并评价这些数据。`;
+        // 构建更详细的营养数据统计和食物列表
+        const mealBreakdownList = records
+            .map((record: any) => {
+                const mealTimeLabel = record.meal_type?.toLowerCase() === 'breakfast' || record.meal_type === '早餐' ? '早餐' :
+                    record.meal_type?.toLowerCase() === 'lunch' || record.meal_type === '午餐' ? '午餐' :
+                        record.meal_type?.toLowerCase() === 'dinner' || record.meal_type === '晚餐' ? '晚餐' :
+                            record.meal_type || '其他';
+                return `${mealTimeLabel}: ${record.food_name || '未知食物'} (${record.calories || 0} kcal, 蛋白质${record.protein_g || 0}g)`;
+            })
+            .join('\n');
+
+        const totalCalories = (summaryData as any).meal_calories || 0;
+        const totalProtein = (summaryData as any).meal_protein || 0;
+        const totalFat = (summaryData as any).meal_fat || 0;
+        const totalCarbs = (summaryData as any).meal_carbohydrate || 0;
+        const totalFiber = (summaryData as any).meal_fiber || 0;
+        const totalSugar = (summaryData as any).meal_sugar || 0;
+
+        const prompt = `【今日饮食数据分析】
+
+            ## 当日进食详情：
+            ${mealBreakdownList || '暂无进食记录'}
+
+            ## 今日营养摄入统计：
+            - 总热量：${totalCalories} kcal
+            - 蛋白质：${totalProtein}g
+            - 脂肪：${totalFat}g
+            - 碳水化合物：${totalCarbs}g
+            - 膳食纤维：${totalFiber}g
+            - 糖类：${totalSugar}g
+
+            ## 分析要求：
+            请基于上述当日饮食数据进行专业且客观的分析总结，包括以下几个方面（仅返回分析内容，不需要标题）：
+
+            1. 营养均衡评价：根据摄入的各营养素比例，评估今日饮食是否均衡
+            2. 热量摄入评价：评估${totalCalories}卡的热量摄入水平（参考成人日常需求1800-2400卡）
+            3. 蛋白质充足性：${totalProtein}g蛋白质是否满足日常需求（参考50-65g/天）
+            4. 建议和改进：针对当日饮食给出具体的改善建议
+
+            请确保回答简洁专业，适合健康管理应用展示。`;
 
         const sessionData = {
             title: `Meal Summary ${getCurrentDateTimeString()}`,

@@ -16,7 +16,7 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
     
     try {
         const user = verifyAccessToken(token);
-        console.log('✅ [authMiddleware] 用户验证成功:', { userId: user.id, username: user.username });
+        console.log('✅ [authMiddleware] 用户验证成功:', { userId: user.userId, email: user.email });
         req.user = user;
         next();
     } catch (error) {

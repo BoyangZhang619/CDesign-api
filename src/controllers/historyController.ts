@@ -286,6 +286,58 @@ async function getRecordsCountByType(
     return result?.count || 0;
 }
 
+// 删除历史记录
+async function deleteHistory(req: Request, res: Response): Promise<Response> {
+    const userId = getUserIdFromReq(req);
+    try {
+        const recordId = req.params.id;
+        
+        if (!recordId) {
+            return sendError(res, '记录 ID 不能为空', 400);
+        }
+
+        // 类型和表的映射关系
+        const typeTableMap: Record<string, string> = {
+            'meal': 'checkin_meal_record',
+            'exercise': 'checkin_exercise_record',
+            'sleep': 'checkin_sleep_record'
+        };
+
+        // 首先需要查找记录的类型
+        let recordType: string | null = null;
+        let deleted = false;
+
+        for (const [type, table] of Object.entries(typeTableMap)) {
+            const checkQuery = `SELECT id, user_id FROM ${table} WHERE id = ? AND user_id = ?`;
+            const [rows] = await pool.query(checkQuery, [recordId, userId]) as any;
+            
+            if ((rows as any[]).length > 0) {
+                recordType = type;
+                
+                // 找到了记录所在的表，执行删除
+                const deleteQuery = `DELETE FROM ${table} WHERE id = ? AND user_id = ?`;
+                const [result] = await pool.query(deleteQuery, [recordId, userId]) as any;
+                
+                if (result.affectedRows > 0) {
+                    console.log(`✅ [historyController] 删除 ${type} 类型记录成功, ID: ${recordId}, User: ${userId}, Table: ${table}`);
+                    deleted = true;
+                }
+                break;
+            }
+        }
+
+        if (!deleted) {
+            return sendError(res, '记录不存在或无权删除', 404);
+        }
+
+        return sendResult(res, { message: '记录已删除成功', type: recordType });
+    } catch (error) {
+        console.error('Error deleting history record:', error);
+        return sendError(res, '删除历史记录失败: ' + (error as any).message);
+    }
+}
+
 export {
-    getHistory
+    getHistory,
+    deleteHistory
 };

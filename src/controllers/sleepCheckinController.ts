@@ -6,6 +6,7 @@ import { QueryResult } from "mysql2";
 import { AIChatService } from "../services/aiChatService.js";
 import { getUserIdFromReq } from "./sharedMethods.js";
 import { getCurrentDateTimeString } from '../util/dateTime.js';
+import { getAISummary as getTotalAISummary } from "./dailyCheckinController.js";
 
 // 计算睡眠时长（小时）
 function calculateSleepDuration(sleepStartTime: string, wakeUpTime: string): number {
@@ -95,10 +96,10 @@ async function insertSleepRecord(req: Request, res: Response): Promise<Response>
             message: '睡眠记录已保存',
             status: 'pending_ai_analysis'
         };
+        await getTotalAISummary(req, res).then(() => {
+            generateSleepAnalysisAsync(userId, sleepRecordId, sleepDurationHours, is_nap, wake_up_times, sleep_feeling);
+        });
         sendResult(res, response);
-
-        // 后台异步调用AI生成评分、建议和评价
-        generateSleepAnalysisAsync(userId, sleepRecordId, sleepDurationHours, is_nap, wake_up_times, sleep_feeling);
 
         return res;
     } catch (error) {
