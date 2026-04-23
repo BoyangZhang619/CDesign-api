@@ -3,6 +3,7 @@
  * 负责数据聚合、统计、对比分析等
  */
 
+import { getCurrentDateString } from '../util/dateTime.js';
 import { PortraitDAL } from './portraitDAL.js';
 
 export interface TrendsData {
@@ -30,13 +31,15 @@ export interface TrendsData {
   
   // 周对比
   weekComparison: {
-    exerciseFrequency: number;
+    exerciseFrequencyCurrent: number;
+    exerciseFrequencyPrev: number;
     exerciseFrequencyTrend: number;
-    avgSleepCurrent: number;
-    avgSleepPrev: number;
+    sleepCurrent: number;
+    sleepPrev: number;
     sleepTrend: number;
-    mealBalance: number;
-    mealBalanceTrend: number;
+    mealBalanceCurrent: number;
+    mealBalancePrev: number;
+    mealTrend: number;
   };
   
   // 习惯养成数据
@@ -142,8 +145,8 @@ export class TrendsService {
 
     // 睡眠数据聚合
     const sleepDurations = sleeps.map((s: any) => s.sleep_duration_hours || 0);
-    const totalSleepDuration = sleepDurations.reduce((a: number, b: number) => Number(a) + Number(b), 0) * 60; // 转换为分钟
-    const avgSleepDuration = sleepDurations.length > 0 ? totalSleepDuration / sleepDurations.length / 60 : 0;
+    const totalSleepDuration = sleepDurations.reduce((a: number, b: number) => Number(a) + Number(b), 0); // 保持小时单位
+    const avgSleepDuration = sleepDurations.length > 0 ? totalSleepDuration / sleepDurations.length : 0;
     const maxSleepDuration = sleepDurations.length > 0 ? Math.max(...sleepDurations) : 0;
 
     return {
@@ -157,7 +160,7 @@ export class TrendsService {
       maxMealCalories,
       mealCount: meals.length,
       
-      totalSleepDuration,
+      totalSleepDuration: totalSleepDuration * 60, // 返回时转换为分钟
       avgSleepDuration,
       maxSleepDuration,
       sleepCount: sleeps.length,
@@ -186,20 +189,30 @@ export class TrendsService {
     // 健康评分趋势
     const scoreTrend = Math.round((exerciseTrend + sleepTrend) / 2 * 0.7 + (Math.max(0, -caloriesTrend) || 0) * 0.3);
 
+    // 计算饮食趋势
+    const mealTrend = (prev as any).mealCount ?
+      Math.round(((current.mealCount - (prev as any).mealCount) / (prev as any).mealCount) * 100) : 0;
+
     return {
       caloriesTrend,
       exerciseTrend,
       sleepTrend,
       scoreTrend,
       weekComparison: {
-        exerciseFrequency: current.exerciseCount || 0,
+        // 运动对比
+        exerciseFrequencyCurrent: current.exerciseCount || 0,
         exerciseFrequencyPrev: (prev as any).exerciseCount || 0,
         exerciseFrequencyTrend: exerciseTrend,
-        avgSleepCurrent: Math.round(current.avgSleepDuration * 10) / 10,
-        avgSleepPrev: (prev as any).avgSleepDuration ? Math.round(((prev as any).avgSleepDuration || 0) * 10) / 10 : 0,
+        
+        // 睡眠对比
+        sleepCurrent: Math.round(current.avgSleepDuration * 10) / 10,
+        sleepPrev: (prev as any).avgSleepDuration ? Math.round(((prev as any).avgSleepDuration || 0) * 10) / 10 : 0,
         sleepTrend,
-        mealBalance: Math.round(current.avgMealCalories / 2500 * 100),
-        mealBalanceTrend: current.mealCount > 0 ? ((prev as any).mealCount ? Math.round(((current.mealCount - (prev as any).mealCount) / (prev as any).mealCount) * 100) : 0) : 0
+        
+        // 饮食对比 - 使用用餐次数作为对比指标
+        mealBalanceCurrent: current.mealCount || 0,
+        mealBalancePrev: (prev as any).mealCount || 0,
+        mealTrend
       }
     };
   }
@@ -239,47 +252,37 @@ export class TrendsService {
    */
   private static generateDailyData(checkinData: any, days: number): Array<{date: string; exercise: number; meal: number; sleep: number}> {
     const result = [];
-    const now = new Date();
-
+    const now = getCurrentDateString();
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
       
       // 使用 YYYY-MM-DD 格式进行日期比较，避免时区问题
       const dateStr = date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-      const dateYMD = date.getFullYear() + '-' + 
-                      String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                      String(date.getDate()).padStart(2, '0');
-
+      const dateYMD = getCurrentDateString(date);
       // 查找该日期的数据
       const dayExercises = (checkinData.exerciseData || []).filter((e: any) => {
         const eDate = new Date(e.created_at);
-        const eYMD = eDate.getFullYear() + '-' + 
-                     String(eDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(eDate.getDate()).padStart(2, '0');
+        const eYMD = getCurrentDateString(eDate);
         return eYMD === dateYMD;
       });
 
       const dayMeals = (checkinData.mealData || []).filter((m: any) => {
         const mDate = new Date(m.created_at);
-        const mYMD = mDate.getFullYear() + '-' + 
-                     String(mDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(mDate.getDate()).padStart(2, '0');
+        const mYMD = getCurrentDateString(mDate);
         return mYMD === dateYMD;
       });
 
       const daySleeps = (checkinData.sleepData || []).filter((s: any) => {
         const sDate = new Date(s.created_at);
-        const sYMD = sDate.getFullYear() + '-' + 
-                     String(sDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                     String(sDate.getDate()).padStart(2, '0');
+        const sYMD = getCurrentDateString(sDate);
         return sYMD === dateYMD;
       });
 
       result.push({
         date: dateStr,
         exercise: dayExercises.reduce((sum: number, e: any) => sum + (e.duration_min || 0), 0),
-        meal: dayMeals.reduce((sum: number, m: any) => sum + (m.calories || 0), 0),
+        meal: dayMeals.reduce((sum: number, m: any) => Number(sum) + Number(m.calories || 0), 0),
         sleep: daySleeps.length > 0 ? daySleeps[0].sleep_duration_hours || 0 : 0
       });
     }
@@ -342,19 +345,19 @@ export class TrendsService {
    */
   private static getDefaultTrendsData(): TrendsData {
     return {
-      avgExercise: 35,
-      maxExercise: 60,
-      totalExerciseTime: 5.5,
+      avgExercise: 0,
+      maxExercise: 0,
+      totalExerciseTime: 0,
       
-      avgMealCalories: 2000,
-      maxMealCalories: 2800,
+      avgMealCalories: 0,
+      maxMealCalories: 0,
       
-      avgSleep: 7.2,
-      maxSleep: 8.5,
-      totalSleepTime: 50.4,
+      avgSleep: 0,
+      maxSleep: 0,
+      totalSleepTime: 0,
       
-      totalCalories: 12500,
-      healthScore: 78,
+      totalCalories: 0,
+      healthScore: 0,
       
       caloriesTrend: 0,
       exerciseTrend: 0,
@@ -362,13 +365,15 @@ export class TrendsService {
       scoreTrend: 0,
       
       weekComparison: {
-        exerciseFrequency: 5,
+        exerciseFrequencyCurrent: 0,
+        exerciseFrequencyPrev: 0,
         exerciseFrequencyTrend: 0,
-        avgSleepCurrent: 7.2,
-        avgSleepPrev: 6.8,
-        sleepTrend: 5,
-        mealBalance: 78,
-        mealBalanceTrend: 0
+        sleepCurrent: 0,
+        sleepPrev: 0,
+        sleepTrend: 0,
+        mealBalanceCurrent: 0,
+        mealBalancePrev: 0,
+        mealTrend: 0
       },
 
       habits: [

@@ -510,7 +510,7 @@ export class PortraitDAL {
         FROM checkin_exercise_record
         WHERE user_id = ? 
           AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) <= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -521,7 +521,7 @@ export class PortraitDAL {
         FROM checkin_meal_record
         WHERE user_id = ? 
           AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) <= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -532,7 +532,7 @@ export class PortraitDAL {
         FROM checkin_sleep_record
         WHERE user_id = ? 
           AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-          AND DATE(created_at) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(created_at) <= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC
       `;
 
@@ -551,7 +551,7 @@ export class PortraitDAL {
         FROM task_completion_records
         WHERE user_id = ? 
           AND DATE(completion_date) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-          AND DATE(completion_date) < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+          AND DATE(completion_date) <= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY completion_date DESC
       `;
 
