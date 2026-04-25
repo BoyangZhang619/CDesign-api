@@ -73,7 +73,7 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
 进食来源: ${food_source}
 进食时段: ${meal_type}
 
-请返回以下格式的数据(仅返回数字，单位为：热量kcal,蛋白质g,脂肪g,碳水g,纤维g,糖g,如果所有数据都为零，则强制使热量值为1，不必复述信息，不得额外输出内容，若备注内容无相关性请忽略)：
+请返回以下格式的数据(仅返回数字，单位为：热量(kcal),蛋白质(g),脂肪(g),碳水(g),纤维(g),糖(g),如果用户输入所得结果的所有数据都为零（只要用户输入了食物，即使没有关于该数据的其他信息，也要根据改内容来得出对应的数据，只有其输出完全未提到饮食才给空），则强制使热量值为1，不必复述信息，不得额外输出内容，若备注内容无相关性请忽略)：
 格式: 热量|蛋白质|脂肪|碳水|纤维|糖
 示例: 500|20|15|60|5|10`;
 
@@ -299,7 +299,7 @@ async function calculateAISummary(summaryData: object, userId: number) {
         const totalFiber = (summaryData as any).meal_fiber || 0;
         const totalSugar = (summaryData as any).meal_sugar || 0;
 
-        const prompt = `【今日饮食数据分析】
+        const prompt = `[饮食健康信息的的数据内容处理与分析]
 
             ## 当日进食详情：
             ${mealBreakdownList || '暂无进食记录'}

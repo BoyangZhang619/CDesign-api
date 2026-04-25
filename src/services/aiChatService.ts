@@ -105,6 +105,9 @@ export class AIChatService {
       throw new Error('会话不存在');
     }
 
+    if (userMessage.startsWith('[有关健康问题的提问/web使用辅助]')) {
+      userMessage = userMessage.replace('[有关健康问题的提问/web使用辅助]', '').trim();
+    }
     // 记录用户消息
     const savedUserMessage = await AIChatDAL.addMessage(
       sessionId,
@@ -234,7 +237,7 @@ export class AIChatService {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 秒超时
+        timeout: 60000 // 60 秒超时
       });
 
       if (response.status === 200 && response.data.output?.text) {

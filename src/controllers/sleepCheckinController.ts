@@ -468,7 +468,7 @@ async function getAISummary(req: Request, res: Response): Promise<Response> {
 async function calculateAISummary(summaryData: object,userId: number) {
     // 使用 AIChatService 处理 AI 分析总结
     try {
-        const prompt = `请基于以下睡眠数据进行AI分析总结：
+        const prompt = `[睡眠健康信息的的数据内容处理与分析]请基于以下睡眠数据进行AI分析总结：
         ${JSON.stringify(summaryData, null, 2)}
     请提供以下方面的AI分析总结(仅返回总结内容，不需要标题)：
     1.这是当天得到的睡眠数据，请分析并评价这些数据。`;

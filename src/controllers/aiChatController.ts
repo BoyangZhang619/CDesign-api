@@ -148,7 +148,9 @@ export class AIChatController {
     try {
       const userId = getUserIdFromReq(req);
       const sessionId = parseInt(String(req.params.id), 10);
-      const { content } = req.body;
+      let { content } = req.body;
+      content = "[有关健康问题的提问/web使用辅助]" + content.trim();
+
 
       if (!content) {
         sendError(res, '消息内容不能为空', 400);
@@ -328,12 +330,13 @@ export class AIChatController {
     try {
       const userId = getUserIdFromReq(req);
       const sessionId = parseInt(String(req.params.id), 10);
-      const { content } = req.body;
+      let { content } = req.body;
 
       if (!content) {
         sendError(res, '消息内容不能为空', 400);
         return;
       }
+      content = "[有关健康问题的提问/web使用辅助]" + content.trim();
 
       // 设置 SSE 响应头
       res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
@@ -396,12 +399,13 @@ export class AIChatController {
     try {
       const userId = getUserIdFromReq(req);
       const sessionId = parseInt(String(req.params.id), 10);
-      const { messageId, content } = req.body;
+      let { messageId, content } = req.body;
 
       if (!content) {
         sendError(res, '消息内容不能为空', 400);
         return;
       }
+      content = "[有关健康问题的提问/web使用辅助]" + content.trim();
 
       // 编辑原消息
       if (messageId) {

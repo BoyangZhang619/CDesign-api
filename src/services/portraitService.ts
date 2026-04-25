@@ -575,7 +575,7 @@ export class PortraitService {
       const userProfile = await PortraitDAL.getUserProfile(userId);
       
       // 构建包含用户背景信息的 AI 分析提示
-      const analysisPrompt = `
+      const analysisPrompt = `[用户的总体状态信息处理与分析]
 请根据以下用户的健康信息、最近的打卡数据以及任务完成情况进行综合分析，并返回 JSON 格式的评分结果。
 
 【用户背景信息】

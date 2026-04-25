@@ -153,7 +153,7 @@ async function generateAISuggestedTasks(userId: number, healthInfo: any) {
         ).join('\n');
 
         // 构建AI请求的prompt
-        const prompt = `请根据以下用户的健康信息和现有任务情况，判断是否需要生成新的AI建议任务。
+        const prompt = `[有关健康问题的提问]请根据以下用户的健康信息和现有任务情况，判断是否需要生成新的AI建议任务。
 如果用户已有足够的任务来支撑其健康目标，则可以不生成新任务（返回空数组[]）。
 如果需要补充，则生成1-3条新的、与现有任务互补的健康任务建议。
 
