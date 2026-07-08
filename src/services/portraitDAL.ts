@@ -3,7 +3,7 @@
  * 负责与数据库交互
  */
 
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 import type {
   PortraitRecord,
   RecommendationRecord,
@@ -61,7 +61,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [rows] = await pool.query(query, [userId]);
+      const [rows] = await dbQuery(query, [userId]);
       const result = (rows as any[])[0];
 
       if (result && result.radarData) {
@@ -124,7 +124,7 @@ export class PortraitDAL {
     `;
 
     try {
-      await pool.query(query, [
+      await dbQuery(query, [
         userId, exerciseScore, mealScore, sleepScore, overallScore,
         bmi, bmiStatus, cardioLevel, cardioStatus,
         metabolism, metabolismStatus, sleepQuality, sleepQualityStatus,
@@ -156,7 +156,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [result] = await pool.query(query, [
+      const [result] = await dbQuery(query, [
         userId,
         recommendation.icon,
         recommendation.title,
@@ -189,7 +189,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [rows] = await pool.query(query, [userId]);
+      const [rows] = await dbQuery(query, [userId]);
       return (rows as any[]) || [];
     } catch (error) {
       console.error('[PortraitDAL.getRecommendations] 错误:', error);
@@ -208,7 +208,7 @@ export class PortraitDAL {
     `;
 
     try {
-      await pool.query(query, [userId]);
+      await dbQuery(query, [userId]);
     } catch (error) {
       console.error('[PortraitDAL.clearRecommendations] 错误:', error);
       throw error;
@@ -230,7 +230,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [result] = await pool.query(query, [
+      const [result] = await dbQuery(query, [
         userId,
         event.eventDate,
         event.title,
@@ -265,7 +265,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [rows] = await pool.query(query, [userId]);
+      const [rows] = await dbQuery(query, [userId]);
       return (rows as any[]) || [];
     } catch (error) {
       console.error('[PortraitDAL.getTimeline] 错误:', error);
@@ -324,7 +324,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [rows] = await pool.query(query, [userId]);
+      const [rows] = await dbQuery(query, [userId]);
       console.log('[PortraitDAL.getSetupStatus] 从 user_profile 查询结果:', rows);
       return ((rows as any[])[0]) || null;
     } catch (error) {
@@ -451,7 +451,7 @@ export class PortraitDAL {
 
     try {
       console.log('[PortraitDAL.updateUserProfile] 更新(插入新的)用户档案:', userId, query);
-      await pool.query(query, values);
+      await dbQuery(query, values);
 
       // 查询更新后的数据
       const result = await this.getUserProfile(userId);
@@ -485,7 +485,7 @@ export class PortraitDAL {
     `;
 
     try {
-      const [rows] = await pool.query(query, [userId]);
+      const [rows] = await dbQuery(query, [userId]);
       return ((rows as any[])[0]) || null;
     } catch (error) {
       console.error('[PortraitDAL.getUserProfile] 错误:', error);
@@ -555,11 +555,11 @@ export class PortraitDAL {
         ORDER BY completion_date DESC
       `;
 
-      const [exerciseData] = await pool.query(exerciseQuery, [userId, offset + days, offset]);
-      const [mealData] = await pool.query(mealQuery, [userId, offset + days, offset]);
-      const [sleepData] = await pool.query(sleepQuery, [userId, offset + days, offset]);
-      const [profileData] = await pool.query(profileQuery, [userId]);
-      const [taskCompletionData] = await pool.query(taskCompletionQuery, [userId, offset + days, offset]);
+      const [exerciseData] = await dbQuery(exerciseQuery, [userId, offset + days, offset]);
+      const [mealData] = await dbQuery(mealQuery, [userId, offset + days, offset]);
+      const [sleepData] = await dbQuery(sleepQuery, [userId, offset + days, offset]);
+      const [profileData] = await dbQuery(profileQuery, [userId]);
+      const [taskCompletionData] = await dbQuery(taskCompletionQuery, [userId, offset + days, offset]);
 
       // 计算 BMI
       let bmi = 0;

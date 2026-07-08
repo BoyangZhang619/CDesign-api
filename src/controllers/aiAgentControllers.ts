@@ -1,4 +1,4 @@
-// import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 // import type { Request, Response } from 'express';
 // import { sendError, sendResult } from '../util/response.js';
 // import { openai_app } from "../services/openai.js";
@@ -36,7 +36,8 @@ async function callDashScope() {
             console.log(`code=${response.status}`);
             console.log(`message=${response.data.message}`);
         }
-    } catch (error) {
+    } catch (err: unknown) {
+        const error = err as any;
         console.error(`Error calling DashScope: ${error.message}`);
         if (error.response) {
             console.error(`Response status: ${error.response.status}`);

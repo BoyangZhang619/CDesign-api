@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 import type { Request, Response } from 'express';
 import { sendError, sendResult } from '../util/response.js';
 import { openai_compatible,openai_app } from "../services/openai.js";
@@ -255,7 +255,7 @@ async function commonChatHandler(req: Request, res: Response): Promise<any> {
             return sendError(res, '无有效输出，可能是模型不支持该请求或其他问题 in commonChatHandler', 500);
         }
 
-        await pool.query(
+        await dbQuery(
             'UPDATE user_account SET credits = credits - ? WHERE id = ?',
             [totalUsage, userId]
         );
@@ -290,7 +290,7 @@ async function streamChatHandler(req: Request, res: Response): Promise<any> {
         }
 
         if (result.usage.total_tokens > 0) {
-            await pool.query(
+            await dbQuery(
                 'UPDATE user_account SET credits = credits - ? WHERE id = ?',
                 [result.usage.total_tokens, userId]
             );

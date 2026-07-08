@@ -1,5 +1,5 @@
 import { Request } from "express";
-import pool from "../config/db.js";
+import { dbQuery } from '../config/db.js'
 
 
 function getUserIdFromReq(req: Request): number {
@@ -19,7 +19,7 @@ interface UserRow {
 }
 
 async function getUserById(userId: number): Promise<UserRow | null> {
-    const [rows] = await pool.query(
+    const [rows] = await dbQuery(
         'SELECT id, credits FROM user_account WHERE id = ? LIMIT 1',
         [userId]
     );

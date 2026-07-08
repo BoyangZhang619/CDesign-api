@@ -1,44 +1,41 @@
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import env from '../config/env.js';
 
 const jwtConfig = env.jwt;
 
-function signAccessToken(user) {
+interface TokenUser {
+    id: number;
+    email: string;
+}
+
+function signAccessToken(user: TokenUser): string {
     return jwt.sign(
-        {
-            userId: user.id,
-            email: user.email
-        },
-        jwtConfig.accessSecret,
-        {
-            expiresIn: jwtConfig.accessExpiresIn,
-        }
+        { userId: user.id, email: user.email },
+        jwtConfig.accessSecret!,
+        { expiresIn: jwtConfig.accessExpiresIn } as jwt.SignOptions
     );
 }
 
-function signRefreshToken(user) {
+function signRefreshToken(user: TokenUser): string {
     return jwt.sign(
-        {
-            userId: user.id,
-        },
-        jwtConfig.refreshSecret,
-        {
-            expiresIn: jwtConfig.refreshExpiresIn,
-        }
+        { userId: user.id },
+        jwtConfig.refreshSecret!,
+        { expiresIn: jwtConfig.refreshExpiresIn } as jwt.SignOptions
     );
 }
 
-function verifyAccessToken(token) {
-    return jwt.verify(token,jwtConfig.accessSecret);
+function verifyAccessToken(token: string): string | JwtPayload {
+    return jwt.verify(token, jwtConfig.accessSecret!);
 }
 
-function verifyRefreshToken(token) {
-    return jwt.verify(token,jwtConfig.refreshSecret);
+function verifyRefreshToken(token: string): string | JwtPayload {
+    return jwt.verify(token, jwtConfig.refreshSecret!);
 }
 
 export {
     signAccessToken,
     signRefreshToken,
     verifyAccessToken,
-    verifyRefreshToken
-}
+    verifyRefreshToken,
+    TokenUser,
+};

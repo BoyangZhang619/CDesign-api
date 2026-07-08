@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import { PortraitDAL } from '../services/portraitDAL.js';
@@ -7,7 +7,7 @@ import { getCurrentDateTimeString } from '../util/dateTime.js';
 // 检测是否需要输入健康信息
 async function CheckHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    const [rows] = await pool.query(
+    const [rows] = await dbQuery(
         'SELECT id, created_at, updated_at FROM user_profile WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
         [userId]
     );
@@ -39,7 +39,7 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
         if (!response) {
             throw new Error('更新用户健康信息失败');
         }
-        sendResult(res, '健康信息保存成功');
+        return sendResult(res, '健康信息保存成功');
 
         // 后台异步生成AI建议的任务
         generateAISuggestedTasks(userId, req.body).catch(err =>
@@ -63,7 +63,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
     }
 
     try {
-        await pool.query(
+        await dbQuery(
             `UPDATE user_profile SET gender = ?, birthday = ?, height_cm = ?, current_weight_kg = ?, target_weight_kg = ?, diet_preferences = ?, diet_other_text = ?, health_goals = ?, goal_other_text = ?, allergies = ?, sleep_habit = ?, activity_level = ? WHERE user_id = ?`,
             [gender, birthday, height, currentWeight, targetWeight, JSON.stringify(dietPreferences), dietOtherText, JSON.stringify(healthGoals), goalOtherText, allergies, sleepHabit, activityLevel, userId]
         );
@@ -78,7 +78,7 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
 // 获取健康信息
 async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    const [rows] = await pool.query(
+    const [rows] = await dbQuery(
         'SELECT * FROM user_profile WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
         [userId]
     );
@@ -118,7 +118,7 @@ async function generateAISuggestedTasks(userId: number, healthInfo: any) {
         console.log('[generateAISuggestedTasks] 为用户 ' + userId + ' 生成AI建议任务');
 
         // 获取用户现有的所有任务
-        const [existingTasks] = await pool.query(
+        const [existingTasks] = await dbQuery(
             `SELECT id, title, description, category, priority, status, is_daily 
              FROM tasks 
              WHERE user_id = ? 
@@ -242,7 +242,7 @@ ${recentTasksDesc || '用户暂无任务'}
                 dueDate.setDate(dueDate.getDate() + (task.is_daily ? 1 : 7));
                 const dueDateStr = dueDate.toISOString().split('T')[0];
 
-                await pool.query(
+                await dbQuery(
                     `INSERT INTO tasks (
                         user_id, title, description, type, category, status, priority, 
                         due_date, is_daily, ai_suggestion_reason, date_type, category_icon

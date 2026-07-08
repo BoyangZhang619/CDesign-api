@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 import { getUserIdFromReq } from './sharedMethods.js';
 import { sendError, sendResult } from '../util/response.js';
 import { getCurrentDateTimeString } from '../util/dateTime.js';
@@ -90,8 +90,8 @@ async function getHistory(req: Request, res: Response): Promise<Response> {
 async function getHistoryRecords(
     userId: number,
     type: string,
-    startDate: string,
-    endDate: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
     search: string,
     sort: string,
     offset: number,
@@ -135,8 +135,8 @@ async function getHistoryRecords(
 async function getHistoryRecordsCount(
     userId: number,
     type: string,
-    startDate: string,
-    endDate: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
     search: string
 ): Promise<number> {
     const types = type ? [type] : ['meal', 'exercise', 'sleep'];
@@ -154,8 +154,8 @@ async function getHistoryRecordsCount(
 async function getRecordsByType(
     userId: number,
     type: string,
-    startDate: string,
-    endDate: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
     search: string
 ): Promise<any[]> {
     let query = '';
@@ -231,7 +231,7 @@ async function getRecordsByType(
         query += ' ORDER BY sleep_start_time DESC';
     }
 
-    const [rows] = await pool.query(query, params);
+    const [rows] = await dbQuery(query, params);
     return rows as any[];
 }
 
@@ -239,8 +239,8 @@ async function getRecordsByType(
 async function getRecordsCountByType(
     userId: number,
     type: string,
-    startDate: string,
-    endDate: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
     search: string
 ): Promise<number> {
     let query = '';
@@ -281,7 +281,7 @@ async function getRecordsCountByType(
         params.push(endDate);
     }
 
-    const [rows] = await pool.query(query, params);
+    const [rows] = await dbQuery(query, params);
     const result = (rows as any[])[0];
     return result?.count || 0;
 }
@@ -309,14 +309,14 @@ async function deleteHistory(req: Request, res: Response): Promise<Response> {
 
         for (const [type, table] of Object.entries(typeTableMap)) {
             const checkQuery = `SELECT id, user_id FROM ${table} WHERE id = ? AND user_id = ?`;
-            const [rows] = await pool.query(checkQuery, [recordId, userId]) as any;
+            const [rows] = await dbQuery(checkQuery, [recordId, userId]) as any;
             
             if ((rows as any[]).length > 0) {
                 recordType = type;
                 
                 // 找到了记录所在的表，执行删除
                 const deleteQuery = `DELETE FROM ${table} WHERE id = ? AND user_id = ?`;
-                const [result] = await pool.query(deleteQuery, [recordId, userId]) as any;
+                const [result] = await dbQuery(deleteQuery, [recordId, userId]) as any;
                 
                 if (result.affectedRows > 0) {
                     console.log(`✅ [historyController] 删除 ${type} 类型记录成功, ID: ${recordId}, User: ${userId}, Table: ${table}`);

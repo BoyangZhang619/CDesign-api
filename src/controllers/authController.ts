@@ -1,11 +1,13 @@
 import bcrypt from 'bcryptjs';
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 import { sha256 } from '../util/hash.js';
 import {
     signAccessToken,
     signRefreshToken,
-    verifyRefreshToken
+    verifyRefreshToken,
+    TokenUser,
 } from '../services/tokenService.js';
+import type { JwtPayload } from 'jsonwebtoken';
 import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import env from '../config/env.js';
@@ -24,10 +26,10 @@ function getRefreshCookieOptions(): Object {
 // 检测用户是否存在在user_account表中
 async function userExists(email: string): Promise<boolean> {
     try {
-        const [rows] = await pool.query('SELECT id FROM user_account WHERE email = ?', [email]);
+        const [rows] = await dbQuery('SELECT id FROM user_account WHERE email = ?', [email]);
         return (rows as any[]).length > 0;
-    } catch (error) {
-        console.error('检测用户是否存在时出错:', error);
+    } catch (err: unknown) {
+        console.error('检测用户是否存在时出错:', err);
         return false;
     }
 }
@@ -35,10 +37,10 @@ async function userExists(email: string): Promise<boolean> {
 // 检测用户是否正常（存在且status=1）
 async function userAccountNormal(email: string): Promise<boolean> {
     try {
-        const [rows] = await pool.query('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
+        const [rows] = await dbQuery('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
         return (rows as any[]).length > 0;
-    } catch (error) {
-        console.error('检测用户是否正常时出错:', error);
+    } catch (err: unknown) {
+        console.error('检测用户是否正常时出错:', err);
         return false;
     }
 }
@@ -73,11 +75,11 @@ async function register(req: Request, res: Response): Promise<Response> {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
-        // await pool.query('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await pool.query('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
+        // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
+        await dbQuery('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
         return sendResult(res, '注册成功');
-    } catch (error) {
-        return sendError(res, error.message + " 注册失败", 500);
+    } catch (err: unknown) {
+        return sendError(res, (err as Error).message + " 注册失败", 500);
     }
 }
 
@@ -89,7 +91,7 @@ async function login(req: Request, res: Response): Promise<Response> {
         if (!email || !password) {
             return sendError(res, '邮箱和密码不能为空', 400);
         }
-        const [rows] = await pool.query('SELECT id, email, password_hash FROM user_account WHERE email = ?', [email]);
+        const [rows] = await dbQuery('SELECT id, email, password_hash FROM user_account WHERE email = ?', [email]);
         if ((rows as any[]).length === 0) {
             return sendError(res, '账号未注册', 400);
         }
@@ -102,11 +104,11 @@ async function login(req: Request, res: Response): Promise<Response> {
         if (!passwordMatch) {
             return sendError(res, '密码错误', 400);
         }
-        const accessToken = await signAccessToken(user);
-        const refreshToken = await signRefreshToken(user);
+        const accessToken = await signAccessToken(user as TokenUser);
+        const refreshToken = await signRefreshToken(user as TokenUser);
         const refreshTokenHash = sha256(refreshToken);
 
-        await pool.query(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
+        await dbQuery(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
                 user.id,
                 refreshTokenHash,
@@ -126,8 +128,8 @@ async function login(req: Request, res: Response): Promise<Response> {
                 email: user.email
             }
         });
-    } catch (error) {
-        return sendError(res, error.message + " 登录失败", 500);
+    } catch (err: unknown) {
+        return sendError(res, (err as Error).message + " 登录失败", 500);
     }
 }
 
@@ -140,16 +142,16 @@ async function refresh(req: Request, res: Response): Promise<Response> {
             return sendError(res, '缺少 refresh token', 401);
         }
 
-        let payload;
+        let payload: JwtPayload;
         try {
-            payload = verifyRefreshToken(refreshToken);
-        } catch (error) {
+            payload = verifyRefreshToken(refreshToken) as JwtPayload;
+        } catch (err: unknown) {
             return sendError(res, '无效的 refresh token', 401);
         }
 
         const refreshTokenHash = sha256(refreshToken);
 
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             `SELECT id, user_id, revoked_at, expires_at FROM refresh_tokens WHERE token_hash = ? LIMIT 1`,
             [refreshTokenHash]
         );
@@ -164,7 +166,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
             return sendError(res, 'refresh token 已失效', 401);
         }
 
-        const [userRows] = await pool.query(
+        const [userRows] = await dbQuery(
             'SELECT id, email, credits FROM user_account WHERE id = ? LIMIT 1',
             [payload.userId]
         );
@@ -182,16 +184,16 @@ async function refresh(req: Request, res: Response): Promise<Response> {
          * 3. 存新 token
          * 4. 返回新 access token
          */
-        await pool.query(
+        await dbQuery(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ?',
             [tokenRecord.id]
         );
 
-        const newAccessToken = signAccessToken(user);
-        const newRefreshToken = signRefreshToken(user);
+        const newAccessToken = signAccessToken(user as TokenUser);
+        const newRefreshToken = signRefreshToken(user as TokenUser);
         const newRefreshTokenHash = sha256(newRefreshToken);
 
-        await pool.query(
+        await dbQuery(
             `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
@@ -212,8 +214,8 @@ async function refresh(req: Request, res: Response): Promise<Response> {
                 credits: user.credits
             }
         });
-    } catch (error) {
-        console.error('refresh error:', error);
+    } catch (err: unknown) {
+        console.error('refresh error:', err);
         return sendError(res, '刷新失败', 500);
     }
 }
@@ -223,7 +225,7 @@ async function me(req: Request, res: Response): Promise<Response> {
     const userId = req.user?.userId ?? null;
     console.log('me userId:', userId);
     try {
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             'SELECT * FROM user_account WHERE id = ? LIMIT 1',
             [userId]
         );
@@ -235,8 +237,8 @@ async function me(req: Request, res: Response): Promise<Response> {
         return sendResult(res, {
             user: rows[0]
         });
-    } catch (error) {
-        console.error('me error:', error);
+    } catch (err: unknown) {
+        console.error('me error:', err);
         return sendError(res, '获取用户信息失败', 500);
     }
 }
@@ -248,7 +250,7 @@ async function logout(req: Request, res: Response): Promise<Response> {
 
         if (refreshToken) {
             const refreshTokenHash = sha256(refreshToken);
-            await pool.query(
+            await dbQuery(
                 'UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?',
                 [refreshTokenHash]
             );
@@ -264,8 +266,8 @@ async function logout(req: Request, res: Response): Promise<Response> {
         return sendResult(res, {
             message: '退出成功'
         });
-    } catch (error) {
-        console.error('logout error:', error);
+    } catch (err: unknown) {
+        console.error('logout error:', err);
         return sendError(res, '退出失败', 500);
     }
 }
@@ -273,7 +275,7 @@ async function logout(req: Request, res: Response): Promise<Response> {
 // 退出所有设备（作废当前用户的所有 refresh token）
 async function logoutAll(req: Request, res: Response): Promise<Response> {
     try {
-        await pool.query(
+        await dbQuery(
             'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',
             [req.user.userId]
         );
@@ -288,8 +290,8 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
         return sendResult(res, {
             message: '已退出所有设备'
         });
-    } catch (error) {
-        console.error('logoutAll error:', error);
+    } catch (err: unknown) {
+        console.error('logoutAll error:', err);
         return sendError(res, '操作失败', 500);
     }
 }
@@ -297,12 +299,12 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
 // 更新用户最后登录时间（每次登录成功后调用）
 async function updateLastLoginTime(userId: number): Promise<void> {
     try {
-        await pool.query(
+        await dbQuery(
             'UPDATE user_account SET last_login_time = NOW() WHERE id = ?',
             [userId]
         );
-    } catch (error) {
-        console.error('updateLastLoginTime error:', error);
+    } catch (err: unknown) {
+        console.error('updateLastLoginTime error:', err);
     }
 }
 
@@ -320,7 +322,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     } = req.body;
     const userId = req.user.userId ?? null;
     try {
-        const [userRows] = await pool.query(
+        const [userRows] = await dbQuery(
             'SELECT id FROM user_account WHERE id = ? LIMIT 1',
             [userId]
         );
@@ -330,7 +332,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         }
 
         // 更新用户信息
-        await pool.query(
+        await dbQuery(
             'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ?, bio = ?, website = ?, location = ? WHERE id = ?',
             [
                 nickname,
@@ -351,8 +353,8 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
                 userId
             }
         });
-    } catch (error) {
-        console.error('updateUserInfo error:', error);
+    } catch (err: unknown) {
+        console.error('updateUserInfo error:', err);
         return sendError(res, '用户信息更新失败', 500);
     }
 }
@@ -370,7 +372,7 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
         return sendError(res, '无效的切换类型', 400);
     }
 
-    const [userRows] = await pool.query(
+    const [userRows] = await dbQuery(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -379,7 +381,7 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
         return sendError(res, '用户不存在', 404);
     }
 
-    await pool.query(`UPDATE user_account SET \`${switch_type}\` = ? WHERE id = ?`, [switch_value, userId]);
+    await dbQuery(`UPDATE user_account SET \`${switch_type}\` = ? WHERE id = ?`, [switch_value, userId]);
     await updateLastLoginTime(userId);
 
     return sendResult(res, {
@@ -399,7 +401,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
-    const [userRows] = await pool.query(
+    const [userRows] = await dbQuery(
         'SELECT id, password FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -418,7 +420,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
 
     // 更新密码
     const hashedNewPassword = await bcrypt.hash(new_password, 10);
-    await pool.query(
+    await dbQuery(
         'UPDATE user_account SET password = ? WHERE id = ?',
         [hashedNewPassword, userId]
     );
@@ -439,7 +441,7 @@ async function SwitchEmail(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId ?? null;
 
     // 检查用户是否存在
-    const [userRows] = await pool.query(
+    const [userRows] = await dbQuery(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
@@ -449,7 +451,7 @@ async function SwitchEmail(req: Request, res: Response): Promise<Response> {
     }
 
     // 更新邮箱
-    await pool.query(
+    await dbQuery(
         'UPDATE user_account SET email = ? WHERE id = ?',
         [new_email, userId]
     );

@@ -2,7 +2,7 @@
  * TodoList 数据库访问层
  */
 
-import pool from '../config/db.js';
+import pool, { dbQuery } from '../config/db.js'
 import { getCurrentDateString, getCurrentDateTimeString, getDateTimeString } from '../util/dateTime.js';
 import type {
     Task,
@@ -125,7 +125,7 @@ export class TodoListDAL {
             taskData.ai_prompt || null
         ];
 
-        const [result] = await pool.query(query, values) as any;
+        const [result] = await dbQuery(query, values) as any;
         return this.getTaskById(userId, result.insertId) as Promise<Task>;
     }
 
@@ -137,7 +137,7 @@ export class TodoListDAL {
     static async getTaskById(userId: number, taskId: number): Promise<Task | null> {
         console.log('Fetching task with ID:', taskId, 'for user ID:', userId);
         const query = 'SELECT * FROM tasks WHERE id = ? AND user_id = ?';
-        const [rows] = await pool.query(query, [taskId, userId]) as any;
+        const [rows] = await dbQuery(query, [taskId, userId]) as any;
 
         if (!rows[0]) {
             return null;
@@ -153,7 +153,7 @@ export class TodoListDAL {
                 SELECT COUNT(*) as count FROM task_completion_records 
                 WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
             `;
-            const [checkResult] = await pool.query(checkQuery, [taskId, userId, today]) as any;
+            const [checkResult] = await dbQuery(checkQuery, [taskId, userId, today]) as any;
 
             if (checkResult[0].count > 0) {
                 // 今天已有完成记录，标记为已完成
@@ -181,18 +181,18 @@ export class TodoListDAL {
 
         // 诊断：检查该用户是否有任何任务
         const diagnosticQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ?';
-        const [diagnosticResult] = await pool.query(diagnosticQuery, [userId]) as any;
+        const [diagnosticResult] = await dbQuery(diagnosticQuery, [userId]) as any;
         console.log(`🔍 [诊断] 用户 ${userId} 在数据库中的总任务数: ${diagnosticResult[0].total}，查询日期：${queryDate}`);
 
         // 诊断：检查该日期的任务
         const dateCheckQuery = 'SELECT COUNT(*) as total FROM tasks WHERE user_id = ? AND due_date = ?';
 
-        const [dateCheckResult] = await pool.query(dateCheckQuery, [userId, queryDate]) as any;
+        const [dateCheckResult] = await dbQuery(dateCheckQuery, [userId, queryDate]) as any;
         console.log(`🔍 [诊断] 用户 ${userId} 在日期 ${queryDate} 的任务数: ${dateCheckResult[0].total}`);
 
         // 诊断：打印所有任务
         const allTasksQuery = 'SELECT id, user_id, title, due_date, status FROM tasks WHERE user_id = ? LIMIT 10';
-        const [allTasks] = await pool.query(allTasksQuery, [userId]) as any;
+        const [allTasks] = await dbQuery(allTasksQuery, [userId]) as any;
         console.log(`🔍 [诊断] 用户 ${userId} 的最近10个任务:`, allTasks);
 
         let whereClause = 'WHERE user_id = ?';
@@ -236,7 +236,7 @@ export class TodoListDAL {
 
         // 获取总数
         const countQuery = `SELECT COUNT(*) as total FROM tasks ${whereClause}`;
-        const [countResult] = await pool.query(countQuery, queryParams) as any;
+        const [countResult] = await dbQuery(countQuery, queryParams) as any;
         const total = countResult[0].total;
 
         // 获取任务列表
@@ -267,7 +267,7 @@ export class TodoListDAL {
         console.log('📊 SQL 查询语句:', dataQuery);
         console.log('📊 SQL 参数:', finalParams);
 
-        const [rows] = await pool.query(dataQuery, finalParams) as any || [];
+        const [rows] = await dbQuery(dataQuery, finalParams) as any || [];
 
         console.log(`✅ 查询结果: 返回 ${rows.length} 条记录，总数: ${total}`);
         console.log('📝 任务数据:', rows);
@@ -289,7 +289,7 @@ export class TodoListDAL {
                     WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
                 `;
                 console.log(`🔍 检查任务 ${task.id} 在 ${queryDate} 是否已完成，执行 SQL: ${checkQuery} 参数: [${task.id}, ${userId}, ${queryDate}]`);
-                const [checkResult] = await pool.query(checkQuery, [task.id, userId, queryDate]) as any;
+                const [checkResult] = await dbQuery(checkQuery, [task.id, userId, queryDate]) as any;
 
                 if (checkResult[0].count > 0) {
                     // 该日已有完成记录，排除该任务（不加入返回列表）
@@ -311,7 +311,7 @@ export class TodoListDAL {
         console.log(`📋 getAllUserTasks: userId=${userId}`);
 
         const query = `SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC`;
-        const [rows] = await pool.query(query, [userId]) as any;
+        const [rows] = await dbQuery(query, [userId]) as any;
 
         console.log(`✅ 获取所有任务 ${rows.length} 条`);
         return rows;
@@ -350,7 +350,7 @@ export class TodoListDAL {
             ORDER BY priority = 'high' DESC, priority = 'medium' DESC, created_at DESC
         `;
 
-        const [allPendingTasks] = await pool.query(query, [userId]) as any;
+        const [allPendingTasks] = await dbQuery(query, [userId]) as any;
         console.log(`📊 获取到 ${allPendingTasks.length} 个 pending 任务`);
 
         // 第二步：根据 date_type 筛选
@@ -405,7 +405,7 @@ export class TodoListDAL {
                     SELECT COUNT(*) as count FROM task_completion_records 
                     WHERE task_id = ? AND user_id = ? AND DATE(completion_date) = ?
                 `;
-                const [checkResult] = await pool.query(checkQuery, [task.id, userId, dateStr]) as any;
+                const [checkResult] = await dbQuery(checkQuery, [task.id, userId, dateStr]) as any;
 
                 if (checkResult[0].count > 0) {
                     // 该日已完成，标记为已完成
@@ -485,7 +485,7 @@ export class TodoListDAL {
         const query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`;
         values.push(taskId, userId);
 
-        await pool.query(query, values);
+        await dbQuery(query, values);
         return this.getTaskById(userId, taskId);
     }
 
@@ -494,7 +494,7 @@ export class TodoListDAL {
      */
     static async deleteTask(userId: number, taskId: number): Promise<boolean> {
         const query = 'DELETE FROM tasks WHERE id = ? AND user_id = ?';
-        const [result] = await pool.query(query, [taskId, userId]) as any;
+        const [result] = await dbQuery(query, [taskId, userId]) as any;
         return result.affectedRows > 0;
     }
 
@@ -592,7 +592,7 @@ export class TodoListDAL {
         SET status = 'pending', completed_date = NULL, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND user_id = ?
       `;
-            const [result] = await pool.query(query, [taskId, userId]) as any;
+            const [result] = await dbQuery(query, [taskId, userId]) as any;
             return result.affectedRows > 0;
         } else {
             // 循环任务：删除今天的完成记录，并清除 completed_date
@@ -660,7 +660,7 @@ export class TodoListDAL {
             `FROM tasks ${whereClause}`
         ].join(" ");
 
-        const [rows] = await pool.query(query, queryParams) as any;
+        const [rows] = await dbQuery(query, queryParams) as any;
         console.log("📊 Task Statistics Query Result:", rows);
         const stats = rows[0];
 
@@ -701,7 +701,7 @@ export class TodoListDAL {
       SELECT * FROM checkin_records 
       WHERE user_id = ? AND checkin_type = ? AND checkin_date = ?
     `;
-        const [rows] = await pool.query(getQuery, [userId, checkinType, checkinDate]) as any;
+        const [rows] = await dbQuery(getQuery, [userId, checkinType, checkinDate]) as any;
 
         if (rows.length > 0) {
             return rows[0];
@@ -712,7 +712,7 @@ export class TodoListDAL {
       INSERT INTO checkin_records (user_id, checkin_type, checkin_date, completed)
       VALUES (?, ?, ?, FALSE)
     `;
-        const [result] = await pool.query(createQuery, [userId, checkinType, checkinDate]) as any;
+        const [result] = await dbQuery(createQuery, [userId, checkinType, checkinDate]) as any;
 
         return {
             id: result.insertId,
@@ -734,7 +734,7 @@ export class TodoListDAL {
       SET completed = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
-        const [result] = await pool.query(query, [completed, recordId]) as any;
+        const [result] = await dbQuery(query, [completed, recordId]) as any;
         return result.affectedRows > 0;
     }
 
@@ -747,7 +747,7 @@ export class TodoListDAL {
       SET status = 'overdue', updated_at = CURRENT_TIMESTAMP
       WHERE status = 'pending' AND due_date < CURDATE()
     `;
-        const [result] = await pool.query(query) as any;
+        const [result] = await dbQuery(query) as any;
         return result.affectedRows;
     }
 
@@ -783,7 +783,7 @@ export class TodoListDAL {
       ORDER BY completion_date DESC, completion_time DESC
     `;
 
-        const [rows] = await pool.query(query, queryParams) as any;
+        const [rows] = await dbQuery(query, queryParams) as any;
         return rows;
     }
 
@@ -827,7 +827,7 @@ export class TodoListDAL {
 
         query += ' ORDER BY due_date DESC';
 
-        const [rows] = await pool.query(query, queryParams) as any;
+        const [rows] = await dbQuery(query, queryParams) as any;
         return rows;
     }
 
@@ -846,7 +846,7 @@ export class TodoListDAL {
       ORDER BY due_date DESC LIMIT 1
     `;
 
-        const [rows] = await pool.query(query, [userId, checkinType, date, date]) as any;
+        const [rows] = await dbQuery(query, [userId, checkinType, date, date]) as any;
         return rows[0] || null;
     }
 }

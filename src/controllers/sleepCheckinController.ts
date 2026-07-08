@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import { dbQuery } from '../config/db.js'
 import { sendError, sendResult } from "../util/response.js";
 import { Request, Response } from "express";
 import { insertEmptyDailyCheckin } from "./dailyCheckinController.js";
@@ -73,7 +73,7 @@ async function insertSleepRecord(req: Request, res: Response): Promise<Response>
         const sleepDurationHours = calculateSleepDuration(sleep_start_time, wake_up_time);
 
         // 先插入记录到数据库，AI生成字段先为空
-        const [result] = await pool.query(
+        const [result] = await dbQuery(
             'INSERT INTO checkin_sleep_record (user_id, daily_checkin_id, sleep_start_time, wake_up_time, sleep_duration_hours, is_nap, wake_up_times, sleep_feeling) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 userId ?? null,
@@ -148,7 +148,7 @@ async function generateSleepAnalysisAsync(
 
         // 更新数据库中的AI生成字段
         if (analysisData) {
-            await pool.query(
+            await dbQuery(
                 'UPDATE checkin_sleep_record SET sleep_quality_score = ?, suggestion = ?, evaluation = ? WHERE id = ? AND user_id = ?',
                 [
                     analysisData.sleepQualityScore,
@@ -217,7 +217,7 @@ async function getSleepRecords(req: Request, res: Response): Promise<Response> {
 
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             'SELECT * FROM checkin_sleep_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()) ORDER BY sleep_start_time DESC',
             [userId, userId]
         );
@@ -253,7 +253,7 @@ async function updateSleepRecord(req: Request, res: Response): Promise<Response>
         // 如果修改了睡眠时间，需要重新计算睡眠时长并触发AI重新分析
         if (sleep_start_time || wake_up_time) {
             // 获取原记录
-            const [originalRecords] = await pool.query(
+            const [originalRecords] = await dbQuery(
                 'SELECT sleep_start_time, wake_up_time FROM checkin_sleep_record WHERE id = ? AND user_id = ?',
                 [sleepRecordId, userId]
             );
@@ -275,7 +275,7 @@ async function updateSleepRecord(req: Request, res: Response): Promise<Response>
             const newSleepDurationHours = calculateSleepDuration(newStartTime, newWakeUpTime);
 
             // 更新记录，并清空AI生成的字段以便重新计算
-            await pool.query(
+            await dbQuery(
                 'UPDATE checkin_sleep_record SET sleep_start_time = ?, wake_up_time = ?, sleep_duration_hours = ?, is_nap = ?, wake_up_times = ?, sleep_feeling = ?, sleep_quality_score = NULL, suggestion = NULL, evaluation = NULL WHERE id = ? AND user_id = ?',
                 [
                     newStartTime,
@@ -293,7 +293,7 @@ async function updateSleepRecord(req: Request, res: Response): Promise<Response>
             generateSleepAnalysisAsync(userId, parseInt(sleepRecordId), newSleepDurationHours, is_nap ?? 0, wake_up_times, sleep_feeling);
         } else {
             // 只更新其他字段
-            await pool.query(
+            await dbQuery(
                 'UPDATE checkin_sleep_record SET is_nap = ?, wake_up_times = ?, sleep_feeling = ? WHERE id = ? AND user_id = ?',
                 [
                     is_nap ?? 0,
@@ -322,7 +322,7 @@ async function deleteSleepRecord(req: Request, res: Response): Promise<Response>
             : req.params.sleepRecordId;
         const userId = getUserIdFromReq(req);
 
-        const result = await pool.query(
+        const result = await dbQuery(
             'DELETE FROM checkin_sleep_record WHERE id = ? AND user_id = ?',
             [sleepRecordId, userId]
         );
@@ -345,7 +345,7 @@ async function getSleepStatistics(req: Request, res: Response): Promise<Response
         const userId = getUserIdFromReq(req);
         const days = parseInt(req.query.days as string) || 7;
 
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             `SELECT 
                 COUNT(*) as record_count,
                 AVG(sleep_duration_hours) as avg_sleep_duration,
@@ -382,7 +382,7 @@ async function getSleepStatistics(req: Request, res: Response): Promise<Response
 async function getSummaryResult(req: Request, res: Response): Promise<object> {
     try {
         const userId = getUserIdFromReq(req);
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             'SELECT * FROM checkin_sleep_record WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId, userId]
         );
@@ -416,7 +416,7 @@ async function getSummary(req: Request, res: Response): Promise<Response> {
 async function updateSleepAISummary(userId: number) {
     try {
         // 获取当日所有睡眠记录
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             `SELECT * FROM checkin_sleep_record 
              WHERE user_id = ? AND daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())
              ORDER BY created_at DESC`,
@@ -450,7 +450,7 @@ async function updateSleepAISummary(userId: number) {
 async function getAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             'SELECT * FROM checkin_ai_summary WHERE daily_checkin_id = (SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE())',
             [userId]
         );
@@ -483,24 +483,24 @@ async function calculateAISummary(summaryData: object,userId: number) {
         const aiResult = await AIChatService.sendMessage(userId, session.id, prompt);
 
         if (aiResult?.aiMessage) {
-            const dailyCheckinId = (await pool.query(
+            const dailyCheckinId = (await dbQuery(
                 'SELECT id FROM daily_checkin WHERE user_id = ? AND checkin_date = CURDATE()',
                 [userId]
             ))[0][0]?.id;
 
             if (dailyCheckinId) {
-                const [existingRows] = await pool.query(
+                const [existingRows] = await dbQuery(
                     'SELECT id FROM checkin_ai_summary WHERE daily_checkin_id = ?',
                     [dailyCheckinId]
                 );
 
                 if ((existingRows as any[]).length > 0) {
-                    await pool.query(
+                    await dbQuery(
                         'UPDATE checkin_ai_summary SET sleep_ai_summary = ? WHERE daily_checkin_id = ?',
                         [aiResult.aiMessage.content, dailyCheckinId]
                     );
                 } else {
-                    await pool.query(
+                    await dbQuery(
                         'INSERT INTO checkin_ai_summary (daily_checkin_id, sleep_ai_summary) VALUES (?, ?)',
                         [dailyCheckinId, aiResult.aiMessage.content]
                     );
@@ -533,7 +533,7 @@ export {
 async function getAllDailyAISummary(req: Request, res: Response): Promise<Response> {
     const userId = getUserIdFromReq(req);
     try {
-        const [rows] = await pool.query(
+        const [rows] = await dbQuery(
             `SELECT 
                 id,
                 daily_checkin_id,

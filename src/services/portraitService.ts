@@ -379,7 +379,7 @@ export class PortraitService {
 
       return {
         completed: status.isCompleted,
-        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt))
+        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt ?? Date.now()))
       };
     } catch (error) {
       console.error('[PortraitService.getSetupStatus] 错误:', error);
@@ -412,7 +412,7 @@ export class PortraitService {
 
       return {
         completed: status.isCompleted,
-        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt))
+        lastUpdated: getCurrentDateTimeString(new Date(status.completedAt ?? Date.now()))
       };
     } catch (error) {
       console.error('[PortraitService.updateSetupStatus] 错误:', error);

@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import env from './config/env.js';
-import pool from './config/db.js';
+import pool, { dbQuery } from './config/db.js';
 import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
@@ -32,6 +32,7 @@ const fixedOrigins = [
     'http://localhost:5174',
     'http://192.168.1.4:5173',
     'http://192.168.1.4:5174',
+    'http://192.168.1.8:5173',
     'http://172.27.51.67:5173',
     'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
@@ -48,7 +49,7 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false,
 }));
 app.use(cors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         if (!origin || fixedOrigins.includes(origin) || cfPattern.test(origin)) {
             return callback(null, true);
         }

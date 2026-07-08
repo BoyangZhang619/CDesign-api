@@ -3,7 +3,7 @@
  * 从 task_completion_records 表获取数据
  */
 
-import pool from '../config/db.js';
+import { dbQuery } from '../config/db.js'
 
 export interface TaskCompletionRecord {
   id: number;
@@ -99,7 +99,7 @@ export class TaskCompletionHistoryDAL {
 
     // 获取总数
     const countQuery = `SELECT COUNT(*) as total FROM task_completion_records ${whereClause}`;
-    const [countResult] = (await pool.query(countQuery, queryParams)) as any;
+    const [countResult] = (await dbQuery(countQuery, queryParams)) as any;
     const total = countResult[0]?.total || 0;
 
     // 构建排序语句
@@ -143,7 +143,7 @@ export class TaskCompletionHistoryDAL {
     console.log('📊 SQL 查询语句:', dataQuery);
     console.log('📊 SQL 参数:', finalParams);
 
-    const [rows] = (await pool.query(dataQuery, finalParams)) as any;
+    const [rows] = (await dbQuery(dataQuery, finalParams)) as any;
 
     console.log(`✅ 查询结果: 返回 ${rows.length} 条记录，总数: ${total}`);
     console.log('📝 任务完成记录:', rows);
@@ -163,7 +163,7 @@ export class TaskCompletionHistoryDAL {
       WHERE id = ? AND user_id = ?
     `;
 
-    const [rows] = (await pool.query(query, [recordId, userId])) as any;
+    const [rows] = (await dbQuery(query, [recordId, userId])) as any;
 
     if (!rows[0]) {
       return null;
@@ -193,7 +193,7 @@ export class TaskCompletionHistoryDAL {
       WHERE user_id = ?
     `;
 
-    const [rows] = (await pool.query(query, [userId])) as any;
+    const [rows] = (await dbQuery(query, [userId])) as any;
 
     console.log('✅ [TaskCompletionHistoryDAL] 统计信息:', rows[0]);
     return rows[0] || {};
@@ -232,7 +232,7 @@ export class TaskCompletionHistoryDAL {
 
     query += ' GROUP BY DATE(completion_date) ORDER BY date DESC';
 
-    const [rows] = (await pool.query(query, params)) as any;
+    const [rows] = (await dbQuery(query, params)) as any;
 
     console.log('✅ [TaskCompletionHistoryDAL] 按日期汇总:', rows);
     return rows;
