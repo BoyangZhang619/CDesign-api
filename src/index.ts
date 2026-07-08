@@ -23,6 +23,7 @@ import characterAvatarRouters from './routes/characterAvatarRouters.js';
 import todolistRouters from './routes/todoListRouters.js';
 import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 import sleepQualityRouters from './routes/sleepQualityRouters.js';
+import avatarRouters from './routes/avatarRouters.js';
 import { initializeSleepQualityModel } from './services/sleepQualityPredictService.js';
 
 import { getCurrentDateTimeString } from './util/dateTime.js';
@@ -93,6 +94,7 @@ app.use('/api/history', historyRouters);
 app.use('/api/tasks', todolistRouters);
 app.use('/api/task-completion-history', taskCompletionHistoryRouters);
 app.use('/api/sleep-quality', sleepQualityRouters);
+app.use('/api/avatars', avatarRouters);
 
 // 健康检查端点
 app.get('/health', (_, res) => {
