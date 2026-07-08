@@ -29,6 +29,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "gh": "^2.8.9",
+    "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.19.1",
     "onnxruntime-node": "^1.24.3",

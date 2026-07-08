@@ -357,10 +357,19 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     }
 }
 
-// 切换用户信息 [nickname, avatar_url, role]
+// 允许切换的用户信息字段白名单
+const ALLOWED_SWITCH_FIELDS = ['nickname', 'avatar_url', 'role', 'phone', 'bio', 'website', 'location'] as const;
+
+// 切换用户信息 [nickname, avatar_url, role, phone, bio, website, location]
 async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {
-    const { email = null, password = null, switch_type = null, switch_value = null } = req.body;
+    const { email = null, switch_type = null, switch_value = null } = req.body;
     const userId = req.user.userId ?? null;
+
+    // 白名单校验：仅允许切换预定义的安全字段
+    if (!switch_type || !ALLOWED_SWITCH_FIELDS.includes(switch_type)) {
+        return sendError(res, '无效的切换类型', 400);
+    }
+
     const [userRows] = await pool.query(
         'SELECT id FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
@@ -370,21 +379,12 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
         return sendError(res, '用户不存在', 404);
     }
 
-    const [rows] = await pool.query('SELECT count(*) as count FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = "user_account" AND column_name = ?', [switch_type]);
-
-    if ((rows as any[])[0].count === 0) {
-        return sendError(res, '无效的切换类型', 400);
-    }
-
-    await pool.query(`UPDATE user_account SET ${switch_type} = ? WHERE id = ?`, [switch_value, userId]);
+    await pool.query(`UPDATE user_account SET \`${switch_type}\` = ? WHERE id = ?`, [switch_value, userId]);
     await updateLastLoginTime(userId);
 
     return sendResult(res, {
         message: '用户信息切换成功',
-        userInfo: {
-            email,
-            userId
-        }
+        userInfo: { email, userId }
     });
 }
 

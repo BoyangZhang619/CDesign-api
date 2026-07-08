@@ -10,6 +10,7 @@ import {
     SwitchAdmin,
     SwitchPassword,
     SwitchEmail,
+    SwitchCommonUserInfo,
     updateUserInfo
 } from '../controllers/authController.js';
 
@@ -43,7 +44,7 @@ router.post('/switch-password', authMiddleware, SwitchPassword);
 router.post('/switch-admin', authMiddleware, SwitchAdmin);
 
 // 切换基本用户信息
-router.post('/switch-common-user-info', authMiddleware, SwitchAdmin);
+router.post('/switch-common-user-info', authMiddleware, SwitchCommonUserInfo);
 
 // 更新用户信息（邮箱，名称，头像，手机号，身份）
 router.post('/update-user-info', authMiddleware, updateUserInfo);
