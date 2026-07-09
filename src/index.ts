@@ -38,6 +38,7 @@ const fixedOrigins = [
     // 'http://172.27.51.67:5173',
     'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
+    'https://localhost',
     'http://localhost',
     'https://sanatura.pages.dev',
     'https://sanatura.zbyblq.xin',
