@@ -24,22 +24,21 @@ import todolistRouters from './routes/todoListRouters.js';
 import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 import sleepQualityRouters from './routes/sleepQualityRouters.js';
 import avatarRouters from './routes/avatarRouters.js';
+import checkinRouters from './routes/checkinRouters.js';
 import { initializeSleepQualityModel } from './services/sleepQualityPredictService.js';
 
 import { getCurrentDateTimeString } from './util/dateTime.js';
 
 const fixedOrigins = [
-    // 'http://localhost:5173',
-    // 'http://localhost:5174',
-    // 'http://192.168.1.4:5173',
-    // 'http://192.168.1.4:5174',
-    // 'http://192.168.1.8:5173',
-    // 'http://172.27.51.67:5173',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://192.168.1.4:5173',
+    'http://192.168.1.4:5174',
+    'http://192.168.1.8:5173',
+    'http://172.27.51.67:5173',
     'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
-    'http://localhost',
-    'https://sanatura.pages.dev',
-    'https://sanatura.zbyblq.xin',
+    'https://localhost'
 ];
 // 匹配规则：以 https:// 开头，以 .cdesign-web.pages.dev 结尾
 const cfPattern = /^https:\/\/.*\.cdesign-web\.pages\.dev$/;
@@ -97,6 +96,7 @@ app.use('/api/tasks', todolistRouters);
 app.use('/api/task-completion-history', taskCompletionHistoryRouters);
 app.use('/api/sleep-quality', sleepQualityRouters);
 app.use('/api/avatars', avatarRouters);
+app.use('/api/checkin', checkinRouters);
 
 // 健康检查端点
 app.get('/health', (_, res) => {
