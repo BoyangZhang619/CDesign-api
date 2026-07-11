@@ -4,6 +4,7 @@
 -- ============================================================
 
 -- ── tasks: 任务/TodoList ──
+DROP TABLE IF EXISTS `tasks`;
 CREATE TABLE `tasks` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -29,6 +30,7 @@ CREATE TABLE `tasks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TodoList 任务';
 
 -- ── task_completion_records: 任务完成历史 ──
+DROP TABLE IF EXISTS `task_completion_records`;
 CREATE TABLE `task_completion_records` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `task_id` BIGINT NOT NULL COMMENT '关联 tasks.id',
@@ -47,6 +49,7 @@ CREATE TABLE `task_completion_records` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务完成记录';
 
 -- ── task_statistics: 任务统计数据缓存 ──
+DROP TABLE IF EXISTS `task_statistics`;
 CREATE TABLE `task_statistics` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -61,3 +64,4 @@ CREATE TABLE `task_statistics` (
   UNIQUE KEY `uk_user_date` (`user_id`, `stat_date`),
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务统计缓存';
+

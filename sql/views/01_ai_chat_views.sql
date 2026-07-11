@@ -3,6 +3,7 @@
 -- ============================================================
 
 -- ── v_ai_chat_session_stats: 会话级统计 ──
+DROP VIEW IF EXISTS `v_ai_chat_session_stats`;
 CREATE OR REPLACE VIEW `v_ai_chat_session_stats` AS
 SELECT
   s.id AS session_id,
@@ -26,6 +27,7 @@ LEFT JOIN ai_chat_messages m ON s.id = m.session_id AND m.is_deleted = 0
 GROUP BY s.id;
 
 -- ── v_ai_user_chat_stats: 用户级统计 ──
+DROP VIEW IF EXISTS `v_ai_user_chat_stats`;
 CREATE OR REPLACE VIEW `v_ai_user_chat_stats` AS
 SELECT
   s.user_id,
@@ -39,3 +41,4 @@ SELECT
 FROM ai_chat_sessions s
 LEFT JOIN ai_chat_messages m ON s.id = m.session_id AND m.is_deleted = 0
 GROUP BY s.user_id;
+

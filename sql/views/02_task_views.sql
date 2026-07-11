@@ -3,6 +3,7 @@
 -- ============================================================
 
 -- ── v_task_completion_stats_by_date: 按日期统计完成率 ──
+DROP VIEW IF EXISTS `v_task_completion_stats_by_date`;
 CREATE OR REPLACE VIEW `v_task_completion_stats_by_date` AS
 SELECT
   user_id,
@@ -12,6 +13,7 @@ FROM task_completion_records
 GROUP BY user_id, completed_date;
 
 -- ── v_task_completion_stats_by_type: 按类型统计完成率 ──
+DROP VIEW IF EXISTS `v_task_completion_stats_by_type`;
 CREATE OR REPLACE VIEW `v_task_completion_stats_by_type` AS
 SELECT
   user_id,
@@ -22,3 +24,4 @@ SELECT
 FROM task_completion_records
 WHERE task_type IS NOT NULL
 GROUP BY user_id, task_type;
+

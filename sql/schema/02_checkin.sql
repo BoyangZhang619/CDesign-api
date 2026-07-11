@@ -5,6 +5,7 @@
 -- ============================================================
 
 -- ── daily_checkin: 每日打卡中枢表 ──
+DROP TABLE IF EXISTS `daily_checkin`;
 CREATE TABLE `daily_checkin` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -38,6 +39,7 @@ CREATE TABLE `daily_checkin` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='每日打卡中枢表';
 
 -- ── checkin_meal_record: 饮食打卡记录 ──
+DROP TABLE IF EXISTS `checkin_meal_record`;
 CREATE TABLE `checkin_meal_record` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `daily_checkin_id` BIGINT NOT NULL COMMENT '关联 daily_checkin.id',
@@ -66,6 +68,7 @@ CREATE TABLE `checkin_meal_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='饮食打卡记录';
 
 -- ── checkin_exercise_record: 运动打卡记录 ──
+DROP TABLE IF EXISTS `checkin_exercise_record`;
 CREATE TABLE `checkin_exercise_record` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `daily_checkin_id` BIGINT NOT NULL COMMENT '关联 daily_checkin.id',
@@ -91,6 +94,7 @@ CREATE TABLE `checkin_exercise_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='运动打卡记录';
 
 -- ── checkin_sleep_record: 睡眠打卡记录 ──
+DROP TABLE IF EXISTS `checkin_sleep_record`;
 CREATE TABLE `checkin_sleep_record` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `daily_checkin_id` BIGINT NOT NULL COMMENT '关联 daily_checkin.id',
@@ -115,6 +119,7 @@ CREATE TABLE `checkin_sleep_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='睡眠打卡记录';
 
 -- ── checkin_records: 任务关联的打卡记录（Todolist 使用） ──
+DROP TABLE IF EXISTS `checkin_records`;
 CREATE TABLE `checkin_records` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL,
@@ -133,6 +138,7 @@ CREATE TABLE `checkin_records` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='打卡记录（Todolist 关联使用）';
 
 -- ── checkin_ai_summary: AI 打卡分析总结 ──
+DROP TABLE IF EXISTS `checkin_ai_summary`;
 CREATE TABLE `checkin_ai_summary` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -152,3 +158,4 @@ CREATE TABLE `checkin_ai_summary` (
   CONSTRAINT `fk_ai_summary_user` FOREIGN KEY (`user_id`) REFERENCES `user_account`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_ai_summary_daily` FOREIGN KEY (`daily_checkin_id`) REFERENCES `daily_checkin`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI 打卡分析总结';
+

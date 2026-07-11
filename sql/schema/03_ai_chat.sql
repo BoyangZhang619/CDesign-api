@@ -4,6 +4,7 @@
 -- ============================================================
 
 -- ── ai_chat_sessions: AI 聊天会话 ──
+DROP TABLE IF EXISTS `ai_chat_sessions`;
 CREATE TABLE `ai_chat_sessions` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '会话ID',
   `uuid` VARCHAR(36) NOT NULL COMMENT '会话唯一标识(UUID)',
@@ -38,6 +39,7 @@ CREATE TABLE `ai_chat_sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 聊天会话';
 
 -- ── ai_chat_messages: AI 聊天消息 ──
+DROP TABLE IF EXISTS `ai_chat_messages`;
 CREATE TABLE `ai_chat_messages` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '消息ID',
   `session_id` BIGINT NOT NULL COMMENT '所属会话ID',
@@ -71,3 +73,4 @@ CREATE TABLE `ai_chat_messages` (
   CONSTRAINT `fk_message_session` FOREIGN KEY (`session_id`) REFERENCES `ai_chat_sessions`(`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_message_user` FOREIGN KEY (`user_id`) REFERENCES `user_account`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 聊天消息';
+

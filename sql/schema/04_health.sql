@@ -4,6 +4,7 @@
 -- ============================================================
 
 -- ── health_portrait: 健康画像评分 ──
+DROP TABLE IF EXISTS `health_portrait`;
 CREATE TABLE `health_portrait` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -28,6 +29,7 @@ CREATE TABLE `health_portrait` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='健康画像';
 
 -- ── health_profile_setup: 健康档案引导状态 ──
+DROP TABLE IF EXISTS `health_profile_setup`;
 CREATE TABLE `health_profile_setup` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -43,6 +45,7 @@ CREATE TABLE `health_profile_setup` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='健康档案引导完成状态';
 
 -- ── health_recommendations: 个性化健康建议 ──
+DROP TABLE IF EXISTS `health_recommendations`;
 CREATE TABLE `health_recommendations` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -61,6 +64,7 @@ CREATE TABLE `health_recommendations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='个性化健康建议';
 
 -- ── health_timeline: 健康时间线 ──
+DROP TABLE IF EXISTS `health_timeline`;
 CREATE TABLE `health_timeline` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -78,3 +82,4 @@ CREATE TABLE `health_timeline` (
   KEY `idx_event_date` (`event_date`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='健康时间线';
+

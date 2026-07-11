@@ -4,6 +4,7 @@
 -- ============================================================
 
 -- ── character_avatar: 角色像素头像 ──
+DROP TABLE IF EXISTS `character_avatar`;
 CREATE TABLE `character_avatar` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '头像ID',
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -20,6 +21,7 @@ CREATE TABLE `character_avatar` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色像素头像';
 
 -- ── pixel_avatars: 像素头像库 ──
+DROP TABLE IF EXISTS `pixel_avatars`;
 CREATE TABLE `pixel_avatars` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -33,3 +35,4 @@ CREATE TABLE `pixel_avatars` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_user_current` (`user_id`, `is_current`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='像素头像库';
+

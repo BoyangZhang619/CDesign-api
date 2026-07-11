@@ -4,6 +4,7 @@
 -- ============================================================
 
 -- ── user_account: 核心用户账户 ──
+DROP TABLE IF EXISTS `user_account`;
 CREATE TABLE `user_account` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `email` VARCHAR(255) NOT NULL COMMENT '邮箱（登录名）',
@@ -28,6 +29,7 @@ CREATE TABLE `user_account` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户账户';
 
 -- ── user_profile: 健康档案 ──
+DROP TABLE IF EXISTS `user_profile`;
 CREATE TABLE `user_profile` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
@@ -49,6 +51,7 @@ CREATE TABLE `user_profile` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户健康档案';
 
 -- ── user_settings: 用户偏好设置 ──
+DROP TABLE IF EXISTS `user_settings`;
 CREATE TABLE `user_settings` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL,
@@ -63,6 +66,7 @@ CREATE TABLE `user_settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户偏好设置';
 
 -- ── refresh_tokens: JWT 刷新令牌 ──
+DROP TABLE IF EXISTS `refresh_tokens`;
 CREATE TABLE `refresh_tokens` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL,
@@ -76,3 +80,4 @@ CREATE TABLE `refresh_tokens` (
   KEY `idx_expires_at` (`expires_at`),
   CONSTRAINT `fk_refresh_user` FOREIGN KEY (`user_id`) REFERENCES `user_account`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='JWT 刷新令牌';
+
