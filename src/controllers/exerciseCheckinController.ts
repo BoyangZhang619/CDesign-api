@@ -151,6 +151,7 @@ async function generateExerciseAnalysisAsync(
         const sessionData = {
             title: `Exercise Analysis ${getCurrentDateTimeString()}`,
             description: '运动打卡AI分析',
+            tags: 'system',
             ai_model: 'dashscope'
         };
         
@@ -525,6 +526,7 @@ async function calculateAISummary(summaryData: object,userId: number) {
         const sessionData = {
             title: `Exercise Summary ${getCurrentDateTimeString()}`,
             description: '运动数据AI总结',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 

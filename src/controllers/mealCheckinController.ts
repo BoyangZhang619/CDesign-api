@@ -81,6 +81,7 @@ async function calculateNutritionDataAsync(userId: number, mealRecordId: number,
         const sessionData = {
             title: `Nutrition Analysis ${getCurrentDateTimeString()}`,
             description: '食物营养成分计算',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 
@@ -325,6 +326,7 @@ async function calculateAISummary(summaryData: object, userId: number) {
         const sessionData = {
             title: `Meal Summary ${getCurrentDateTimeString()}`,
             description: '饮食数据AI总结',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 

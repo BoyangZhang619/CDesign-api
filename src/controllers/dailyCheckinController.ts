@@ -245,6 +245,7 @@ async function calculateAISummary(summaryData: object, userId: number) {
         const sessionData = {
             title: `Daily Summary ${getCurrentDateString()}`,
             description: '每日健康数据分析总结',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 

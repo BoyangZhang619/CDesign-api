@@ -214,6 +214,7 @@ ${recentTasksDesc || '用户暂无任务'}
         const sessionData = {
             title: `Health Tasks Generation ${getCurrentDateTimeString()}`,
             description: '根据健康信息和现有任务生成AI建议任务',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 

@@ -132,6 +132,7 @@ async function generateSleepAnalysisAsync(
         const sessionData = {
             title: `Sleep Analysis ${getCurrentDateTimeString()}`,
             description: '睡眠数据分析',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 
@@ -476,6 +477,7 @@ async function calculateAISummary(summaryData: object,userId: number) {
         const sessionData = {
             title: `Sleep Summary ${getCurrentDateTimeString()}`,
             description: '睡眠数据AI总结',
+            tags: 'system',
             ai_model: 'dashscope'
         };
 

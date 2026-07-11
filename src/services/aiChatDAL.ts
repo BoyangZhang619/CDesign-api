@@ -23,8 +23,8 @@ export class AIChatDAL {
     const query = `
       INSERT INTO ai_chat_sessions (
         uuid, user_id, session_name, description, ai_model, ai_app_id,
-        system_prompt, temperature, max_tokens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        system_prompt, temperature, max_tokens, tags
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
@@ -36,7 +36,8 @@ export class AIChatDAL {
       sessionData.ai_app_id || null,
       sessionData.system_prompt || null,
       sessionData.temperature ?? 0.7,
-      sessionData.max_tokens ?? 2048
+      sessionData.max_tokens ?? 2048,
+      sessionData.tags || null,
     ];
 
     const [result] = await dbQuery(query, values) as any;
