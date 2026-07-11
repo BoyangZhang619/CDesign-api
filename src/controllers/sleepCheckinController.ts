@@ -389,7 +389,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
         const result = {
             records: rows as any[],
             sleep_duration_time: (rows as any[]).reduce((sum, record) => sum + (record.sleep_duration_hours || 0), 0),
-            sleep_start_time: (rows as any[]).reduce((sum, record) => sum + (record.start_time || 0), 0),
+            sleep_start_time: (rows as any[]).reduce((sum, record) => sum + (record.sleep_start_time || 0), 0),
             sleep_wakeup_times: (rows as any[]).reduce((sum, record) => sum + (record.wake_up_times || 0), 0),
             checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'

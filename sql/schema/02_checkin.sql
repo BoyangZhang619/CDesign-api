@@ -141,7 +141,7 @@ CREATE TABLE `checkin_records` (
 DROP TABLE IF EXISTS `checkin_ai_summary`;
 CREATE TABLE `checkin_ai_summary` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
-  `user_id` BIGINT NOT NULL COMMENT '关联 user_account.id',
+  `user_id` BIGINT DEFAULT NULL COMMENT '关联 user_account.id（可空，通过 daily_checkin JOIN 获取）',
   `daily_checkin_id` BIGINT DEFAULT NULL COMMENT '关联 daily_checkin.id',
   `total_ai_summary` TEXT COMMENT '当日综合 AI 总结',
   `meal_ai_summary` TEXT COMMENT '饮食 AI 总结',
@@ -150,6 +150,7 @@ CREATE TABLE `checkin_ai_summary` (
   `is_meal_summary_updated` TINYINT(1) DEFAULT 0 COMMENT '饮食总结是否需要更新',
   `is_exercise_summary_updated` TINYINT(1) DEFAULT 0 COMMENT '运动总结是否需要更新',
   `is_sleep_summary_updated` TINYINT(1) DEFAULT 0 COMMENT '睡眠总结是否需要更新',
+  `is_total_summary_updated` TINYINT(1) DEFAULT 0 COMMENT '综合总结是否需要更新',
   `generated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '生成时间',
   `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),

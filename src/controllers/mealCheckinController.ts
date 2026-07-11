@@ -205,7 +205,7 @@ async function getSummaryResult(req: Request, res: Response): Promise<object> {
             meal_carbohydrate: (rows as any[]).reduce((sum, record) => sum + (record.carbohydrate_g || 0), 0),
             meal_fiber: (rows as any[]).reduce((sum, record) => sum + (record.fiber_g || 0), 0),
             meal_sugar: (rows as any[]).reduce((sum, record) => sum + (record.sugar_g || 0), 0),
-            meal_water: (rows as any[]).reduce((sum, record) => sum + (record.water_g || 0), 0),
+            meal_water: 0, // V2: 饮水量在 daily_checkin.water_intake_ml，不在 checkin_meal_record
             checkin_date: getCurrentDateTimeString().split('T')[0],
             message: (rows as any[]).length > 0 ? '获取打卡记录成功' : '今天还没有打卡记录'
         };

@@ -37,7 +37,7 @@ async function userExists(email: string): Promise<boolean> {
 // 检测用户是否正常（存在且status=1）
 async function userAccountNormal(email: string): Promise<boolean> {
     try {
-        const [rows] = await dbQuery('SELECT id FROM user_account WHERE email = ? AND status = 1', [email]);
+        const [rows] = await dbQuery("SELECT id FROM user_account WHERE email = ? AND status = 'active'", [email]);
         return (rows as any[]).length > 0;
     } catch (err: unknown) {
         console.error('检测用户是否正常时出错:', err);
@@ -76,7 +76,7 @@ async function register(req: Request, res: Response): Promise<Response> {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
         // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await dbQuery('INSERT INTO user_account (credits,email, password_hash, nickname, avatar_url, phone, role, status, admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 1, 0]);
+        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_url, phone, role, status, is_admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 'active', 0]);
         return sendResult(res, '注册成功');
     } catch (err: unknown) {
         return sendError(res, (err as Error).message + " 注册失败", 500);
@@ -402,7 +402,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
 
     // 检查用户是否存在
     const [userRows] = await dbQuery(
-        'SELECT id, password FROM user_account WHERE email = ? AND id = ? LIMIT 1',
+        'SELECT id, password_hash FROM user_account WHERE email = ? AND id = ? LIMIT 1',
         [email, userId]
     );
 
@@ -413,7 +413,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
     const user = userRows[0];
 
     // 验证旧密码
-    const isOldPasswordValid = await bcrypt.compare(old_password, user.password);
+    const isOldPasswordValid = await bcrypt.compare(old_password, user.password_hash);
     if (!isOldPasswordValid) {
         return sendError(res, '旧密码不正确', 400);
     }
@@ -421,7 +421,7 @@ async function SwitchPassword(req: Request, res: Response): Promise<Response> {
     // 更新密码
     const hashedNewPassword = await bcrypt.hash(new_password, 10);
     await dbQuery(
-        'UPDATE user_account SET password = ? WHERE id = ?',
+        'UPDATE user_account SET password_hash = ? WHERE id = ?',
         [hashedNewPassword, userId]
     );
     await updateLastLoginTime(userId);

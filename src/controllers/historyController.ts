@@ -214,7 +214,7 @@ async function getRecordsByType(
         `;
         
         if (search) {
-            query += ' AND (sleep_feeling LIKE ? OR note LIKE ?)';
+            query += ' AND (sleep_feeling LIKE ? OR suggestion LIKE ?)';
             params.push(`%${search}%`, `%${search}%`);
         }
 
@@ -264,7 +264,7 @@ async function getRecordsCountByType(
         query = 'SELECT COUNT(*) as count FROM checkin_sleep_record WHERE user_id = ?';
         
         if (search) {
-            query += ' AND (sleep_feeling LIKE ? OR note LIKE ?)';
+            query += ' AND (sleep_feeling LIKE ? OR suggestion LIKE ?)';
             params.push(`%${search}%`, `%${search}%`);
         }
     }
