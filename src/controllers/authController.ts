@@ -76,7 +76,7 @@ async function register(req: Request, res: Response): Promise<Response> {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
         // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_url, phone, role, status, is_admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [999999, email, hashedPassword, name, avatar_url, phone, role, 'active', 0]);
+        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_url, phone, role, status, is_admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [0, email, hashedPassword, name, avatar_url, phone, role, 'active', 0]);
         return sendResult(res, '注册成功');
     } catch (err: unknown) {
         return sendError(res, (err as Error).message + " 注册失败", 500);

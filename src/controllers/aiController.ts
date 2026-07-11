@@ -9,6 +9,7 @@
  */
 import type { Request, Response } from 'express';
 import { sendError, sendResult } from '../util/response.js';
+import { dbQuery } from '../config/db.js';
 import { getUserIdFromReq, getUserById } from './sharedMethods.js';
 import { fastapiChat, fastapiChatStream, type FastAPIChatRequest } from '../services/fastapiClient.js';
 
@@ -40,7 +41,6 @@ async function commonChatHandler(req: Request, res: Response): Promise<any> {
         const user = await getUserById(userId);
 
         if (!user) return sendError(res, '用户不存在', 404);
-        if (user.credits <= 0) return sendError(res, '额度不足', 403);
 
         const fastReq: FastAPIChatRequest = {
             messages: buildMessages(req),
@@ -52,6 +52,11 @@ async function commonChatHandler(req: Request, res: Response): Promise<any> {
         };
 
         const result = await fastapiChat(fastReq);
+
+        // 累计用量：将消耗的 tokens 加到 credits 上
+        if (result.usage?.total_tokens > 0) {
+            dbQuery('UPDATE user_account SET credits = credits + ? WHERE id = ?', [result.usage.total_tokens, userId]).catch(() => {});
+        }
 
         return sendResult(res, {
             ok: true,
@@ -74,7 +79,6 @@ async function streamChatHandler(req: Request, res: Response): Promise<void> {
         const user = await getUserById(userId);
 
         if (!user) { sendError(res, '用户不存在', 404); return; }
-        if (user.credits <= 0) { sendError(res, '额度不足', 403); return; }
 
         const fastReq: FastAPIChatRequest = {
             messages: buildMessages(req),
