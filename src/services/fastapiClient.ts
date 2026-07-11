@@ -3,8 +3,6 @@
  *
  * 所有 LLM 模型调用统一通过此模块转发到 sanatura-fastapi 服务。
  * Zeabur 同项目内通过服务名互访（如 http://sanatura-fastapi:8000）。
- *
- * 替代原有的 openai.ts + aiChatService.callDashScope* 等直接调用。
  */
 import axios from 'axios';
 
@@ -43,20 +41,30 @@ export async function fastapiChat(req: FastAPIChatRequest): Promise<FastAPIChatR
 
 // ── 流式对话 ───────────────────────────────────────────────
 
-/**
- * 调用 FastAPI SSE 流式端点，返回 ReadableStream。
- * 用法同旧 aiChatService.sendMessageStream() 的返回值。
- */
 export async function fastapiChatStream(req: FastAPIChatRequest): Promise<Response> {
-  const resp = await fetch(`${FASTAPI_URL}/v1/chat/completions/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-  });
-  if (!resp.ok) {
-    throw new Error(`FastAPI stream 返回 ${resp.status}: ${resp.statusText}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+  try {
+    const resp = await fetch(`${FASTAPI_URL}/v1/chat/completions/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`FastAPI stream ${resp.status}: ${text || resp.statusText}`);
+    }
+    return resp;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('AI 服务响应超时（3分钟），请重试');
+    }
+    throw new Error(`${FASTAPI_URL}/stream 连接失败: ${err.message || err}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return resp;
 }
 
 // ── 健康检查 ───────────────────────────────────────────────

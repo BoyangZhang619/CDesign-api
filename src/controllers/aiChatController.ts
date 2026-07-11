@@ -353,6 +353,18 @@ export class AIChatController {
       res.write('data: {"type":"connected"}\n\n');
       console.log('[sendMessageStream] 已发送 connected 事件');
 
+      // FastAPI 连通性预检
+      const { fastapiHealth } = await import('../services/fastapiClient.js');
+      const isFastAPIOk = await fastapiHealth().catch(() => false);
+      if (!isFastAPIOk) {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: `AI 服务不可用（无法连接到 ${process.env.FASTAPI_URL || 'http://localhost:8000'}），请检查 FASTAPI_URL 配置与 sanatura-fastapi 服务状态`,
+        })}\n\n`);
+        res.end();
+        return;
+      }
+
       // 流式处理消息
       try {
         const result = await AIChatService.sendMessageStream(
