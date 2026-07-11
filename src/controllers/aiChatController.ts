@@ -340,8 +340,11 @@ export class AIChatController {
 
       // 设置 SSE 响应头
       res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Content-Encoding', 'identity');
+      res.flushHeaders();
       // 从请求头获取 Origin，而不是使用通配符
       const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
       if (origin) {
@@ -426,8 +429,11 @@ export class AIChatController {
 
       // 设置 SSE 响应头
       res.setHeader('Content-Type', 'text/event-stream;charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Content-Encoding', 'identity');
+      res.flushHeaders();
       // 从请求头获取 Origin，而不是使用通配符
       const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
       if (origin) {
