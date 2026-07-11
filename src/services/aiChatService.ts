@@ -1,9 +1,12 @@
 /**
  * AI 聊天系统业务逻辑层（Service）
+ *
+ * ⚠️ 2026-07-11 重构: 所有 LLM 调用已迁移至 sanatura-fastapi (DeepSeek)。
+ *    原有 callDashScope / callOpenAI 方法已雪藏为 _legacyCallDashScope / _legacyCallOpenAI。
+ *    新增 fastapiCallLLM / fastapiCallLLMStream 方法。
  */
-
-import axios from 'axios';
 import { AIChatDAL } from './aiChatDAL.js';
+import { fastapiChat, fastapiChatStream } from './fastapiClient.js';
 import type {
   AIChatSession,
   AIChatMessage,
@@ -11,8 +14,6 @@ import type {
   UpdateChatSessionRequest,
   SendMessageRequest,
   AIResponse,
-  DashScopeRequest,
-  DashScopeResponse,
   MessageRole,
   ChatQueryParams,
   ChatHistory,
@@ -20,7 +21,6 @@ import type {
   FinishReason
 } from '../types/aiChat.js';
 import { ContentType as ContentTypeEnum, FinishReason as FinishReasonEnum, MessageRole as MessageRoleEnum } from '../types/aiChat.js';
-import { access } from 'fs';
 
 export class AIChatService {
   /**
@@ -180,104 +180,46 @@ export class AIChatService {
   }
 
   /**
-   * 调用 AI API（支持多个 AI 提供商）
+   * 调用 AI API — 统一入口，通过 FastAPI 网关调用 DeepSeek
    */
   private static async callAI(
     session: AIChatSession,
-    userMessage: string,
+    _userMessage: string,
     chatHistory: AIChatMessage[],
-    modelType: string
+    _modelType: string
   ): Promise<AIResponse> {
-    switch (modelType.toLowerCase()) {
-      case 'dashscope':
-      case 'dashscope_ai_agent':
-        return this.callDashScope(session, userMessage, chatHistory);
-      //   case 'gpt-4':
-      //   case 'gpt-3.5-turbo':
-      //     return this.callOpenAI(session, userMessage, chatHistory);
-      default:
-        throw new Error(`不支持的 AI 模型类型: ${modelType}`);
-    }
-  }
+    // 构建标准 messages 数组（从历史消息中提取）
+    const messages = chatHistory
+      .filter(m => m.role !== 'system' || chatHistory.indexOf(m) === 0)
+      .map(m => ({ role: m.role, content: m.content }));
 
-  /**
-   * 调用阿里云 DashScope API（AI Agent）
-   * 支持多轮对话通过 session_id
-   */
-  private static async callDashScope(
-    session: AIChatSession,
-    userMessage: string,
-    chatHistory: AIChatMessage[]
-  ): Promise<AIResponse> {
-    const apiKey = process.env.DASHSCOPE_API_KEY;
-    const appId = session.ai_app_id || process.env.AI_AGENT_APP_ID;
-
-    if (!apiKey || !appId) {
-      throw new Error('缺少 DashScope API 配置');
+    // 如果有 system prompt，确保放在第一条
+    if (session.system_prompt && messages.length > 0 && messages[0].role !== 'system') {
+      messages.unshift({ role: 'system' as any, content: session.system_prompt });
     }
 
-    const url = `https://dashscope.aliyuncs.com/api/v1/apps/${appId}/completion`;
+    const result = await fastapiChat({
+      messages,
+      model: session.ai_model === 'deepseek-chat' ? 'deepseek-chat' : undefined,
+      temperature: Number(session.temperature) || 0.7,
+      max_tokens: session.max_tokens || 2048,
+      user_id: session.user_id,
+    });
 
-    // 构建请求体，包含 session_id 用于多轮对话记忆
-    const requestBody: DashScopeRequest = {
-      input: {
-        prompt: userMessage,
-        // 如果已有 session_id，传递用于维持对话上下文
-        ...(session.dashscope_session_id && { session_id: session.dashscope_session_id })
-      },
-      parameters: {
-        temperature: session.temperature || 0.7,
-        max_tokens: session.max_tokens || 2048
-      }
-    };
-
-    try {
-      const response = await axios.post<DashScopeResponse>(url, requestBody, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+    return {
+      success: true,
+      data: {
+        text: result.content,
+        finishReason: 'stop',
+        modelName: result.model,
+        sessionId: undefined,  // DeepSeek 无 session_id 概念，多轮通过 messages 维护
+        usage: {
+          promptTokens: result.usage.prompt_tokens,
+          completionTokens: result.usage.completion_tokens,
+          totalTokens: result.usage.total_tokens,
         },
-        timeout: 60000 // 60 秒超时
-      });
-
-      if (response.status === 200 && response.data.output?.text) {
-        // 返回 AI 响应，包含 session_id 用于后续保存
-        return {
-          success: true,
-          data: {
-            text: response.data.output.text,
-            finishReason: response.data.output.finishReason,
-            modelName: 'dashscope-ai-agent',
-            sessionId: response.data.output.session_id, // 保存 session_id 用于下一轮对话
-            usage: {
-              promptTokens: response.data.usage?.input_tokens || 0,
-              completionTokens: response.data.usage?.output_tokens || 0,
-              totalTokens: (response.data.usage?.input_tokens || 0) + (response.data.usage?.output_tokens || 0)
-            }
-          }
-        };
-      } else {
-        throw new Error(`DashScope 返回错误: ${response.status}`);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || error.message;
-        throw new Error(`DashScope API 调用失败: ${errorMessage}`);
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 调用 OpenAI API（预留实现）
-   */
-  private static async callOpenAI(
-    session: AIChatSession,
-    userMessage: string,
-    chatHistory: AIChatMessage[]
-  ): Promise<AIResponse> {
-    // TODO: 实现 OpenAI 调用
-    throw new Error('暂不支持 OpenAI');
+      },
+    };
   }
 
   /**
@@ -472,31 +414,79 @@ export class AIChatService {
   /**
    * 调用 AI 流式接口
    */
+  /**
+   * 调用 AI 流式接口 — 通过 FastAPI 网关调用 DeepSeek
+   */
   private static async callAIStream(
     session: any,
-    userMessage: string,
+    _userMessage: string,
     chatHistory: any[],
-    req: any, // 传递 req 对象以获取请求相关信息（如 headers）
+    _req: any,
     onChunk: (chunk: string) => void,
     onTokens: (tokens: number) => void,
     onContent: (content: string) => void,
     onSessionId?: (sessionId: string) => void
   ): Promise<void> {
-    const model = session.ai_model || 'dashscope';
+    const messages = chatHistory
+      .filter((m: any) => m.role !== 'system' || chatHistory.indexOf(m) === 0)
+      .map((m: any) => ({ role: m.role, content: m.content }));
 
-    if (model === 'dashscope') {
-      return this.callDashScopeStream(session, userMessage, chatHistory, req, onChunk, onTokens, onContent, onSessionId);
-    } else if (model === 'gpt-4' || model === 'gpt-3.5-turbo') {
-      throw new Error('OpenAI 流式支持开发中');
-    } else {
-      throw new Error(`不支持的 AI 模型: ${model}`);
+    if (session.system_prompt && messages.length > 0 && messages[0].role !== 'system') {
+      messages.unshift({ role: 'system' as any, content: session.system_prompt });
+    }
+
+    const fastStream = await fastapiChatStream({
+      messages,
+      temperature: Number(session.temperature) || 0.7,
+      max_tokens: session.max_tokens || 2048,
+      user_id: session.user_id,
+    });
+
+    const reader = fastStream.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let totalTokens = 0;
+    let accumulatedContent = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'content') {
+              onChunk(event.content);
+              accumulatedContent += event.content;
+              onContent(event.content);
+            } else if (event.type === 'done' && event.usage) {
+              totalTokens = event.usage.total_tokens || 0;
+            } else if (event.type === 'error') {
+              throw new Error(event.message || 'Stream error');
+            }
+          } catch (e: any) {
+            if (e.message?.includes('Stream error')) throw e;
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+      onTokens(totalTokens);
     }
   }
 
   /**
-   * DashScope 流式调用（支持多轮对话）
+   * ⚠️ 已雪藏 — 原 DashScope 流式调用。
+   * 所有流式 LLM 调用已迁移至 callAIStream → fastapiChatStream → FastAPI → DeepSeek。
    */
-  private static async callDashScopeStream(
+  /* SNOW-COVERED: 原 callDashScopeStream 方法体已移除，见 git history
+  private static async _legacyCallDashScopeStream(
     session: any,
     userMessage: string,
     chatHistory: any[],
@@ -669,4 +659,5 @@ export class AIChatService {
       throw error;
     }
   }
+  */
 }

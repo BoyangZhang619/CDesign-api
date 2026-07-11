@@ -1,5 +1,6 @@
 export default {
     port: process.env.PORT || 3000,
+    fastapiUrl: process.env.FASTAPI_URL || 'http://localhost:8000',
     db: {
         host: process.env.MYSQL_HOST,
         port: Number(process.env.MYSQL_PORT || 3306),
