@@ -343,14 +343,13 @@ export class AIChatController {
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
-      res.setHeader('Content-Encoding', 'identity');
-      res.flushHeaders();
-      // 从请求头获取 Origin，而不是使用通配符
       const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
       if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
       }
+      // 必须在所有 setHeader 之后调用
+      res.flushHeaders();
 
       // 发送初始连接事件
       res.write('data: {"type":"connected"}\n\n');
@@ -432,14 +431,12 @@ export class AIChatController {
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
-      res.setHeader('Content-Encoding', 'identity');
-      res.flushHeaders();
-      // 从请求头获取 Origin，而不是使用通配符
       const origin = req.get('Origin') || req.get('Referer')?.split('/').slice(0, 3).join('/');
       if (origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
       }
+      res.flushHeaders();
 
       res.write('data: {"type":"connected"}\n\n');
 
