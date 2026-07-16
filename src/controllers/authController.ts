@@ -12,6 +12,13 @@ import { sendError, sendResult } from '../util/response.js';
 import { Request, Response } from 'express';
 import env from '../config/env.js';
 
+/** 把 '30d'/'7d' 解析为天数，非 d 结尾默认 7 */
+function maxAgeDays(ttl: string): number {
+  const m = ttl.match(/^(\d+)d$/i)
+  return m ? parseInt(m[1], 10) : 7
+}
+const REFRESH_DB_DAYS = maxAgeDays(env.jwt.refreshExpiresIn)
+
 // 返回 refresh token 的 cookie 选项
 function getRefreshCookieOptions(): Object {
     return {
@@ -19,7 +26,7 @@ function getRefreshCookieOptions(): Object {
         secure: env.nodeEnv === 'production',
         sameSite: env.nodeEnv === 'production' ? 'none' as const : 'lax' as const,
         path: '/api/auth',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
+        maxAge: REFRESH_DB_DAYS * 24 * 60 * 60 * 1000
     };
 }
 
@@ -108,7 +115,7 @@ async function login(req: Request, res: Response): Promise<Response> {
         const refreshToken = await signRefreshToken(user as TokenUser);
         const refreshTokenHash = sha256(refreshToken);
 
-        await dbQuery(`INSERT IGNORE INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
+        await dbQuery(`INSERT IGNORE INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ${REFRESH_DB_DAYS} DAY), ?, ?)`,
             [
                 user.id,
                 refreshTokenHash,
@@ -195,7 +202,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
 
         await dbQuery(
             `INSERT IGNORE INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
-       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
+       VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ${REFRESH_DB_DAYS} DAY), ?, ?)`,
             [
                 user.id,
                 newRefreshTokenHash,
