@@ -108,7 +108,7 @@ async function login(req: Request, res: Response): Promise<Response> {
         const refreshToken = await signRefreshToken(user as TokenUser);
         const refreshTokenHash = sha256(refreshToken);
 
-        await dbQuery(`INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
+        await dbQuery(`INSERT IGNORE INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
                 user.id,
                 refreshTokenHash,
@@ -194,7 +194,7 @@ async function refresh(req: Request, res: Response): Promise<Response> {
         const newRefreshTokenHash = sha256(newRefreshToken);
 
         await dbQuery(
-            `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
+            `INSERT IGNORE INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip_address)
        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), ?, ?)`,
             [
                 user.id,

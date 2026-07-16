@@ -1,4 +1,5 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import crypto from 'crypto';
 import env from '../config/env.js';
 
 const jwtConfig = env.jwt;
@@ -10,7 +11,7 @@ interface TokenUser {
 
 function signAccessToken(user: TokenUser): string {
     return jwt.sign(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, jti: crypto.randomUUID() },
         jwtConfig.accessSecret!,
         { expiresIn: jwtConfig.accessExpiresIn } as jwt.SignOptions
     );
@@ -18,7 +19,7 @@ function signAccessToken(user: TokenUser): string {
 
 function signRefreshToken(user: TokenUser): string {
     return jwt.sign(
-        { userId: user.id },
+        { userId: user.id, jti: crypto.randomUUID() },
         jwtConfig.refreshSecret!,
         { expiresIn: jwtConfig.refreshExpiresIn } as jwt.SignOptions
     );
