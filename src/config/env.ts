@@ -11,8 +11,8 @@ export default {
     jwt: {
         accessSecret: process.env.ACCESS_TOKEN_SECRET,
         refreshSecret: process.env.REFRESH_TOKEN_SECRET,
-        accessExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
-        refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
+        accessExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '1h',
+        refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d'
     },
     clientOrigin: process.env.CLIENT_ORIGIN,
     nodeEnv: process.env.NODE_ENV || 'development'

@@ -17,7 +17,7 @@ function getRefreshCookieOptions(): Object {
     return {
         httpOnly: true,
         secure: env.nodeEnv === 'production',
-        sameSite: 'none' as const,  // 跨域时也需要发 cookie
+        sameSite: env.nodeEnv === 'production' ? 'none' as const : 'lax' as const,
         path: '/api/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
     };
@@ -259,7 +259,7 @@ async function logout(req: Request, res: Response): Promise<Response> {
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: env.nodeEnv === 'production',
-            sameSite: 'none',
+            sameSite: env.nodeEnv === 'production' ? 'none' as const : 'lax' as const,
             path: '/api/auth'
         });
 
@@ -283,7 +283,7 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
         res.clearCookie('refreshToken', {
             httpOnly: true,
             secure: env.nodeEnv === 'production',
-            sameSite: 'none',
+            sameSite: env.nodeEnv === 'production' ? 'none' as const : 'lax' as const,
             path: '/api/auth'
         });
 
