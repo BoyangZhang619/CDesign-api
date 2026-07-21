@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import { AIChatService } from '../services/aiChatService.js';
 import { sendResult, sendError } from '../util/response.js';
+import { dbQuery } from '../config/db.js';
 import type {
   CreateChatSessionRequest,
   UpdateChatSessionRequest,
@@ -234,6 +235,32 @@ export class AIChatController {
       }
 
       sendResult(res, { message: 'Message deleted successfully' }, '消息删除成功');
+    } catch (error) {
+      sendError(res, String(error instanceof Error ? error.message : error));
+    }
+  }
+
+  /**
+   * 消息反馈（点赞/点踩）
+   * PATCH /api/ai-chat/messages/:id/feedback
+   */
+  static async feedbackMessage(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = getUserIdFromReq(req);
+      const messageId = parseInt(String(req.params.id), 10);
+      const { feedback } = req.body;
+
+      if (!['up', 'down', 'none'].includes(feedback)) {
+        sendError(res, 'feedback 必须是 up / down / none', 400);
+        return;
+      }
+
+      await dbQuery(
+        'UPDATE ai_chat_messages SET feedback = ? WHERE id = ? AND user_id = ?',
+        [feedback, messageId, userId],
+      );
+
+      sendResult(res, { feedback }, '反馈已记录');
     } catch (error) {
       sendError(res, String(error instanceof Error ? error.message : error));
     }

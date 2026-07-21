@@ -53,6 +53,9 @@ aiChatRouters.get('/sessions/:id/messages', AIChatController.getChatHistory);
 // 编辑消息
 aiChatRouters.patch('/messages/:id', AIChatController.editMessage);
 
+// 消息反馈
+aiChatRouters.patch('/messages/:id/feedback', AIChatController.feedbackMessage);
+
 // 删除消息
 aiChatRouters.delete('/messages/:id', AIChatController.deleteMessage);
 
