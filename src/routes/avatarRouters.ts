@@ -1,28 +1,38 @@
-import { Router } from 'express';
-import authMiddleware from '../middlewares/authMiddleware.js';
+import express from "express";
+import authMiddleware from "../middlewares/authMiddleware.js";
 import {
-  getMyAvatar,
-  saveAvatar,
-  getAvatarHistory,
-  getDefaultAvatars,
-  getPalette,
-} from '../controllers/avatarController.js';
+    createAvatar,
+    getAvatarsByUser,
+    getAvatarBySize,
+    getCurrentAvatar,
+    setCurrentAvatar,
+    deleteAvatar,
+    deleteAvatarsBySize
+} from "../controllers/characterAvatarController.js";
 
-const router = Router();
+const router = express.Router();
 
-// 获取调色板（无需登录）
-router.get('/palette', getPalette);
+router.use(authMiddleware);
 
-// 获取系统默认头像列表
-router.get('/defaults', getDefaultAvatars);
+// 创建新头像
+router.post("/avatar", createAvatar);
 
-// 获取当前用户头像（无头像时自动随机分配默认头像）
-router.get('/', authMiddleware, getMyAvatar);
+// 获取用户所有头像
+router.get("/avatar", getAvatarsByUser);
 
-// 保存/创建新头像
-router.post('/', authMiddleware, saveAvatar);
+// 获取指定大小的所有头像
+router.get("/avatar/size", getAvatarBySize);
 
-// 获取用户历史头像
-router.get('/history', authMiddleware, getAvatarHistory);
+// 获取当前使用的头像（按大小）
+router.get("/avatar/current", getCurrentAvatar);
+
+// 设置为当前使用的头像
+router.put("/avatar/:avatarId/current", setCurrentAvatar);
+
+// 删除特定头像
+router.delete("/avatar/:avatarId", deleteAvatar);
+
+// 删除指定大小的所有头像
+router.delete("/avatar/size", deleteAvatarsBySize);
 
 export default router;

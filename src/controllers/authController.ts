@@ -57,8 +57,8 @@ async function register(req: Request, res: Response): Promise<Response> {
     try {
         const { email, password } = req.body;
         const name = req.body.name || 'A guy/girl';
-        const avatar_url = req.body.avatar_url || 'https://homepage-2em.pages.dev/iconWhite.png';
-        const phone = req.body.phone || '';
+        const avatar_id = req.body.avatar_id || null;
+        const phone_number = req.body.phone_number || '';
         const role = req.body.role || 'student';
 
         if (!email || !password) {
@@ -83,7 +83,7 @@ async function register(req: Request, res: Response): Promise<Response> {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
         // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_url, phone, role, status, is_admin, last_login_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [0, email, hashedPassword, name, avatar_url, phone, role, 'active', 0]);
+        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_id, phone_number, role, status, last_login_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [0, email, hashedPassword, name, avatar_id, phone_number, role, 'active']);
         return sendResult(res, '注册成功');
     } catch (err: unknown) {
         return sendError(res, (err as Error).message + " 注册失败", 500);
@@ -307,7 +307,7 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
 async function updateLastLoginTime(userId: number): Promise<void> {
     try {
         await dbQuery(
-            'UPDATE user_account SET last_login_time = NOW() WHERE id = ?',
+            'UPDATE user_account SET last_login_at = NOW() WHERE id = ?',
             [userId]
         );
     } catch (err: unknown) {
@@ -318,10 +318,10 @@ async function updateLastLoginTime(userId: number): Promise<void> {
 // 更新用户信息
 async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     const {
-        email = null, 
-        nickname = null, 
-        avatar_url = null, 
-        phone = null, 
+        email = null,
+        nickname = null,
+        avatar_id = null,
+        phone_number = null,
         role = null,
         bio = null,
         website = null,
@@ -340,15 +340,12 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
 
         // 更新用户信息
         await dbQuery(
-            'UPDATE user_account SET nickname = ?, avatar_url = ?, phone = ?, role = ?, bio = ?, website = ?, location = ? WHERE id = ?',
+            'UPDATE user_account SET nickname = ?, avatar_id = ?, phone_number = ?, role = ? WHERE id = ?',
             [
                 nickname,
-                avatar_url,
-                phone,
+                avatar_id,
+                phone_number,
                 role,
-                bio,
-                website,
-                location,
                 userId
             ]
         );
@@ -367,7 +364,7 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
 }
 
 // 允许切换的用户信息字段白名单
-const ALLOWED_SWITCH_FIELDS = ['nickname', 'avatar_url', 'role', 'phone', 'bio', 'website', 'location'] as const;
+const ALLOWED_SWITCH_FIELDS = ['nickname', 'avatar_id', 'role', 'phone_number'] as const;
 
 // 切换用户信息 [nickname, avatar_url, role, phone, bio, website, location]
 async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Response> {

@@ -19,7 +19,7 @@ import mealCheckinRouters from './routes/checkin/mealCheckinRouters.js';
 import sleepCheckinRouters from './routes/checkin/sleepCheckinRouters.js';
 import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
-import characterAvatarRouters from './routes/characterAvatarRouters.js';
+import characterAvatarRouters from './routes/avatarRouters.js';
 import todolistRouters from './routes/todoListRouters.js';
 import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 import sleepQualityRouters from './routes/sleepQualityRouters.js';
@@ -83,7 +83,7 @@ app.use('/', rateLimit({ windowMs: 60000, max: 60, standardHeaders: true, legacy
 // 认证接口更严格的速率限制：每分钟每个IP最多10次请求（防暴力破解）
 app.use('/api/auth', rateLimit({ windowMs: 60000, max: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, message: '请求过于频繁，请稍后再试', data: null } }));
 app.use('/api/auth', authRoutes);
-app.use('/api/character-avatar', characterAvatarRouters);
+app.use('/api/avatars/user', avatarRouters);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ai-chat', aiChatRouters);
 app.use('/api/health-info', healthInfoRouters);

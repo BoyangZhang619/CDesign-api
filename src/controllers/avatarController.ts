@@ -11,7 +11,7 @@ async function getMyAvatar(req: Request, res: Response): Promise<Response> {
   const userId = req.user.userId;
   try {
     const [rows] = await dbQuery(
-      'SELECT id, level, pixel_data, is_current FROM pixel_avatars WHERE user_id = ? AND is_current = 1 LIMIT 1',
+      'SELECT id, level, avatar_data, is_current FROM user_avatar WHERE user_id = ? AND is_current = 1 LIMIT 1',
       [userId]
     );
     if ((rows as any[]).length === 0) {
@@ -27,8 +27,8 @@ async function getMyAvatar(req: Request, res: Response): Promise<Response> {
       avatar: {
         id: avatar.id,
         level: avatar.level,
-        pixelData: avatar.pixel_data,
-        colors: decodePixels(avatar.pixel_data, avatar.level as AvatarLevel),
+        pixelData: avatar.avatar_data,
+        colors: decodePixels(avatar.avatar_data, avatar.level as AvatarLevel),
       },
       isDefault: false,
       palette: PALETTE,
@@ -55,10 +55,10 @@ async function saveAvatar(req: Request, res: Response): Promise<Response> {
 
   try {
     // 取消当前头像标记
-    await dbQuery('UPDATE pixel_avatars SET is_current = 0 WHERE user_id = ?', [userId]);
+    await dbQuery('UPDATE user_avatar SET is_current = 0 WHERE user_id = ?', [userId]);
     // 插入新头像
     await dbQuery(
-      'INSERT INTO pixel_avatars (user_id, level, pixel_data, is_current) VALUES (?, ?, ?, 1)',
+      'INSERT INTO user_avatar (user_id, level, avatar_data, is_current) VALUES (?, ?, ?, 1)',
       [userId, level, pixelData]
     );
     return sendResult(res, { message: '头像保存成功', level, pixelData });
@@ -72,11 +72,11 @@ async function getAvatarHistory(req: Request, res: Response): Promise<Response> 
   const userId = req.user.userId;
   try {
     const [rows] = await dbQuery(
-      'SELECT id, level, pixel_data, is_current, created_at FROM pixel_avatars WHERE user_id = ? ORDER BY created_at DESC LIMIT 20',
+      'SELECT id, level, avatar_data, is_current, created_at FROM user_avatar WHERE user_id = ? ORDER BY created_at DESC LIMIT 20',
       [userId]
     );
     return sendResult(res, { avatars: (rows as any[]).map(r => ({
-      id: r.id, level: r.level, pixelData: r.pixel_data,
+      id: r.id, level: r.level, pixelData: r.avatar_data,
       isCurrent: !!r.is_current, createdAt: r.created_at,
     }))});
   } catch (err: unknown) {
@@ -89,13 +89,13 @@ async function getDefaultAvatars(_req: Request, res: Response): Promise<Response
   try {
     // 先从 DB 读取已持久化的默认头像
     const [rows] = await dbQuery(
-      'SELECT id, level, pixel_data FROM pixel_avatars WHERE is_default = 1 LIMIT 20'
+      'SELECT id, level, avatar_data FROM user_avatar WHERE is_default = 1 LIMIT 20'
     );
     if ((rows as any[]).length > 0) {
       return sendResult(res, {
         defaults: (rows as any[]).map(r => ({
-          id: r.id, level: r.level, pixelData: r.pixel_data,
-          colors: decodePixels(r.pixel_data, r.level as AvatarLevel),
+          id: r.id, level: r.level, pixelData: r.avatar_data,
+          colors: decodePixels(r.avatar_data, r.level as AvatarLevel),
         })),
         palette: PALETTE,
       });
@@ -104,7 +104,7 @@ async function getDefaultAvatars(_req: Request, res: Response): Promise<Response
     const defaults = generateDefaultAvatars();
     for (const data of defaults) {
       await dbQuery(
-        'INSERT INTO pixel_avatars (user_id, level, pixel_data, is_default) VALUES (NULL, 16, ?, 1)',
+        'INSERT INTO user_avatar (user_id, level, avatar_data, is_default) VALUES (NULL, 16, ?, 1)',
         [data]
       );
     }
@@ -128,15 +128,15 @@ async function getPalette(_req: Request, res: Response): Promise<Response> {
 async function assignRandomDefault(userId: number): Promise<{ level: number; pixelData: string } | null> {
   try {
     const [rows] = await dbQuery(
-      'SELECT id, level, pixel_data FROM pixel_avatars WHERE is_default = 1 ORDER BY RAND() LIMIT 1'
+      'SELECT id, level, avatar_data FROM user_avatar WHERE is_default = 1 ORDER BY RAND() LIMIT 1'
     );
     if ((rows as any[]).length === 0) return null;
     const def = (rows as any[])[0];
     await dbQuery(
-      'INSERT INTO pixel_avatars (user_id, level, pixel_data, is_current) VALUES (?, ?, ?, 1)',
-      [userId, def.level, def.pixel_data]
+      'INSERT INTO user_avatar (user_id, level, avatar_data, is_current) VALUES (?, ?, ?, 1)',
+      [userId, def.level, def.avatar_data]
     );
-    return { level: def.level, pixelData: def.pixel_data };
+    return { level: def.level, pixelData: def.avatar_data };
   } catch {
     return null;
   }

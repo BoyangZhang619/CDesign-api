@@ -14,7 +14,6 @@ interface UserRow {
     email: string;
     password_hash: string;
     status: number;
-    admin: number;
     credits: number;
 }
 

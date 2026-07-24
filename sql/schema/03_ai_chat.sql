@@ -56,6 +56,7 @@ CREATE TABLE `ai_chat_messages` (
   `finish_reason` VARCHAR(50) DEFAULT NULL COMMENT '结束原因 (stop/length/error/etc)',
   `response_time_ms` INT DEFAULT NULL COMMENT '响应耗时（毫秒）',
   `error_message` TEXT COMMENT '错误消息',
+  `feedback` ENUM('up', 'down', 'none') NOT NULL DEFAULT 'none' COMMENT '用户反馈（点赞/点踩/无）',
   `metadata` JSON DEFAULT NULL COMMENT '扩展元数据 JSON',
   `is_edited` TINYINT(1) DEFAULT 0 COMMENT '是否被编辑过',
   `edited_at` DATETIME DEFAULT NULL COMMENT '编辑时间',

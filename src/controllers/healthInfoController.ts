@@ -54,6 +54,7 @@ async function InsertHealthInfo(req: Request, res: Response): Promise<Response> 
 
 // 更新健康信息
 async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> {
+    /* [SNOW: 等 health profile 重设计] - removed columns referenced in body
     const userId = req.user.userId;
     const { gender, birthday, height, currentWeight, targetWeight, dietPreferences, dietOtherText, healthGoals, goalOtherText, allergies, sleepHabit, activityLevel } = req.body;
 
@@ -73,6 +74,8 @@ async function UpdateHealthInfo(req: Request, res: Response): Promise<Response> 
         console.error('更新健康信息时出错:', error);
         return sendError(res, '更新健康信息失败', 500);
     }
+    */
+    return sendError(res, '健康档案功能升级中，暂不可用', 503);
 }
 
 // 获取健康信息
@@ -92,6 +95,7 @@ async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
 
     const healthInfo = (rows as any[])[0];
 
+    /* [SNOW: 等 health profile 重设计] - dietary_preferences / health_goals columns removed
     // 将逗号分隔的字符串转换回数组
     if (healthInfo.dietary_preferences && typeof healthInfo.dietary_preferences === 'string') {
         healthInfo.dietary_preferences = healthInfo.dietary_preferences.split(',').filter((v: string) => v.trim());
@@ -101,6 +105,7 @@ async function GetHealthInfo(req: Request, res: Response): Promise<Response> {
         healthInfo.health_goals = healthInfo.health_goals.split(',').filter((v: string) => v.trim());
         // healthInfo.health_goals = JSON.parse(healthInfo.health_goals);
     }
+    */
 
     return sendResult(res, {
         message: '用户已填写健康信息',
@@ -160,7 +165,7 @@ async function generateAISuggestedTasks(userId: number, healthInfo: any) {
 【用户健康信息】
 性别: ${healthInfo.gender === 'male' ? '男' : '女'}
 年龄: ${healthInfo.birthday ? Math.floor((new Date().getTime() - new Date(healthInfo.birthday).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : '未知'}岁
-身高: ${healthInfo.height_cm || healthInfo.heightCm || '未知'}cm
+	身高: ${healthInfo.height_cm || healthInfo.heightCm || '未知'}cm
 当前体重: ${healthInfo.current_weight_kg || healthInfo.currentWeight || '未知'}kg
 目标体重: ${healthInfo.target_weight_kg || healthInfo.targetWeight || '未知'}kg
 活动级别: ${healthInfo.activity_level || healthInfo.activityLevel || '未知'}

@@ -47,20 +47,20 @@ function validateAvatarData(avatarData: string, size: number): { valid: boolean;
 async function createAvatar(req: Request, res: Response): Promise<Response> {
     try {
         const userId = getUserIdFromReq(req);
-        const { avatar_size, avatar_data, is_current = false } = req.body;
+        const { size, avatar_data, is_current = false } = req.body;
 
         // 验证必填字段
-        if (!avatar_size || !avatar_data) {
+        if (!size || !avatar_data) {
             return sendError(res, '头像大小和数据为必填项');
         }
 
         // 验证头像大小
-        if (!validateAvatarSize(avatar_size)) {
+        if (!validateAvatarSize(size)) {
             return sendError(res, '头像大小必须是 8、16 或 32 之一');
         }
 
         // 验证头像数据
-        const validation = validateAvatarData(avatar_data, avatar_size);
+        const validation = validateAvatarData(avatar_data, size);
         if (!validation.valid) {
             return sendError(res, validation.message);
         }
@@ -68,15 +68,15 @@ async function createAvatar(req: Request, res: Response): Promise<Response> {
         // 如果设置为当前使用，需要清除同大小的其他当前头像
         if (is_current) {
             await dbQuery(
-                'UPDATE character_avatar SET is_current = false WHERE user_id = ? AND avatar_size = ? AND is_current = true',
-                [userId, avatar_size]
+                'UPDATE user_avatar SET is_current = false WHERE user_id = ? AND size = ? AND is_current = true',
+                [userId, size]
             );
         }
 
         // 插入新头像
         const [result] = await dbQuery(
-            'INSERT INTO character_avatar (user_id, avatar_size, avatar_data, is_current) VALUES (?, ?, ?, ?)',
-            [userId, avatar_size, avatar_data, is_current ? 1 : 0]
+            'INSERT INTO user_avatar (user_id, size, avatar_data, is_current) VALUES (?, ?, ?, ?)',
+            [userId, size, avatar_data, is_current ? 1 : 0]
         );
 
         const avatarId = (result as any).insertId;
@@ -87,7 +87,7 @@ async function createAvatar(req: Request, res: Response): Promise<Response> {
             data: {
                 id: avatarId,
                 user_id: userId,
-                avatar_size,
+                size,
                 is_current,
                 created_at: getCurrentDateTimeString()
             }
@@ -103,7 +103,7 @@ async function getAvatarsByUser(req: Request, res: Response): Promise<Response> 
         const userId = getUserIdFromReq(req);
 
         const [rows] = await dbQuery(
-            'SELECT id, user_id, avatar_size, avatar_data, is_current, created_at FROM character_avatar WHERE user_id = ? ORDER BY avatar_size ASC, created_at DESC',
+            'SELECT id, user_id, size, avatar_data, is_current, created_at FROM user_avatar WHERE user_id = ? ORDER BY size ASC, created_at DESC',
             [userId]
         );
 
@@ -127,7 +127,7 @@ async function getAvatarBySize(req: Request, res: Response): Promise<Response> {
         }
 
         const [rows] = await dbQuery(
-            'SELECT id, user_id, avatar_size, avatar_data, is_current, created_at FROM character_avatar WHERE user_id = ? AND avatar_size = ? ORDER BY created_at DESC',
+            'SELECT id, user_id, size, avatar_data, is_current, created_at FROM user_avatar WHERE user_id = ? AND size = ? ORDER BY created_at DESC',
             [userId, parseInt(size as string)]
         );
 
@@ -151,7 +151,7 @@ async function getCurrentAvatar(req: Request, res: Response): Promise<Response> 
         }
 
         const [rows] = await dbQuery(
-            'SELECT id, user_id, avatar_size, avatar_data, is_current, created_at FROM character_avatar WHERE user_id = ? AND avatar_size = ? AND is_current = true',
+            'SELECT id, user_id, size, avatar_data, is_current, created_at FROM user_avatar WHERE user_id = ? AND size = ? AND is_current = true',
             [userId, parseInt(size as string)]
         );
 
@@ -183,7 +183,7 @@ async function setCurrentAvatar(req: Request, res: Response): Promise<Response> 
 
         // 获取要设置的头像信息
         const [avatarRows] = await dbQuery(
-            'SELECT avatar_size FROM character_avatar WHERE id = ? AND user_id = ?',
+            'SELECT size FROM user_avatar WHERE id = ? AND user_id = ?',
             [avatarId, userId]
         );
 
@@ -191,17 +191,17 @@ async function setCurrentAvatar(req: Request, res: Response): Promise<Response> 
             return sendError(res, '头像不存在');
         }
 
-        const avatarSize = (avatarRows as any[])[0].avatar_size;
+        const avatarSize = (avatarRows as any[])[0].size;
 
         // 清除同大小的其他当前头像
         await dbQuery(
-            'UPDATE character_avatar SET is_current = false WHERE user_id = ? AND avatar_size = ? AND id != ?',
+            'UPDATE user_avatar SET is_current = false WHERE user_id = ? AND size = ? AND id != ?',
             [userId, avatarSize, avatarId]
         );
 
         // 设置当前头像
         await dbQuery(
-            'UPDATE character_avatar SET is_current = true WHERE id = ? AND user_id = ?',
+            'UPDATE user_avatar SET is_current = true WHERE id = ? AND user_id = ?',
             [avatarId, userId]
         );
 
@@ -229,7 +229,7 @@ async function deleteAvatar(req: Request, res: Response): Promise<Response> {
         }
 
         const result = await dbQuery(
-            'DELETE FROM character_avatar WHERE id = ? AND user_id = ?',
+            'DELETE FROM user_avatar WHERE id = ? AND user_id = ?',
             [avatarId, userId]
         );
 
@@ -256,7 +256,7 @@ async function deleteAvatarsBySize(req: Request, res: Response): Promise<Respons
         }
 
         const result = await dbQuery(
-            'DELETE FROM character_avatar WHERE user_id = ? AND avatar_size = ?',
+            'DELETE FROM user_avatar WHERE user_id = ? AND size = ?',
             [userId, parseInt(size as string)]
         );
 
