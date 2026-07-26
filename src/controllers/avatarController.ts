@@ -58,8 +58,8 @@ async function saveAvatar(req: Request, res: Response): Promise<Response> {
     await dbQuery('UPDATE user_avatar SET is_current = 0 WHERE user_id = ?', [userId]);
     // 插入新头像
     await dbQuery(
-      'INSERT INTO user_avatar (user_id, level, avatar_data, is_current) VALUES (?, ?, ?, 1)',
-      [userId, level, pixelData]
+      'INSERT INTO user_avatar (user_id, size, level, avatar_data, is_current) VALUES (?, ?, ?, ?, 1)',
+      [userId, level, level, pixelData]
     );
     return sendResult(res, { message: '头像保存成功', level, pixelData });
   } catch (err: unknown) {
@@ -104,7 +104,7 @@ async function getDefaultAvatars(_req: Request, res: Response): Promise<Response
     const defaults = generateDefaultAvatars();
     for (const data of defaults) {
       await dbQuery(
-        'INSERT INTO user_avatar (user_id, level, avatar_data, is_default) VALUES (NULL, 16, ?, 1)',
+        'INSERT INTO user_avatar (user_id, size, level, avatar_data, is_default) VALUES (NULL, 16, 16, ?, 1)',
         [data]
       );
     }
@@ -133,8 +133,8 @@ async function assignRandomDefault(userId: number): Promise<{ level: number; pix
     if ((rows as any[]).length === 0) return null;
     const def = (rows as any[])[0];
     await dbQuery(
-      'INSERT INTO user_avatar (user_id, level, avatar_data, is_current) VALUES (?, ?, ?, 1)',
-      [userId, def.level, def.avatar_data]
+      'INSERT INTO user_avatar (user_id, size, level, avatar_data, is_current) VALUES (?, ?, ?, ?, 1)',
+      [userId, def.level, def.level, def.avatar_data]
     );
     return { level: def.level, pixelData: def.avatar_data };
   } catch {

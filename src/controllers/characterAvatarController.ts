@@ -19,26 +19,26 @@ function validateAvatarData(avatarData: string, size: number): { valid: boolean;
     if (!avatarData || typeof avatarData !== 'string') {
         return { valid: false, message: '头像数据不能为空' };
     }
-
-    const colors = avatarData.split(',').map(c => c.trim()).filter(c => c);
+    // console.log(avatarData, avatarData.length, typeof avatarData);
+    // const colors = avatarData.split(',').map(c => c.trim()).filter(c => c);
     const expectedCount = size * size;
 
-    if (colors.length !== expectedCount) {
+    if (avatarData.length !== expectedCount) {
         return {
             valid: false,
-            message: `${size}x${size}头像应包含${expectedCount}个颜色，但收到${colors.length}个`
+            message: `${size}x${size}头像应包含${expectedCount}个颜色，但收到${avatarData.length}个`
         };
     }
 
     // 验证每个颜色字符串格式
-    for (const color of colors) {
-        if (!validateRGBAColor(color)) {
-            return {
-                valid: false,
-                message: `无效的颜色格式: ${color}，应为#RRGGBBAA格式`
-            };
-        }
-    }
+    // for (const color of colors) {
+    //     if (!validateRGBAColor(color)) {
+    //         return {
+    //             valid: false,
+    //             message: `无效的颜色格式: ${color}，应为#RRGGBBAA格式`
+    //         };
+    //     }
+    // }
 
     return { valid: true, message: '头像数据有效' };
 }
@@ -48,7 +48,7 @@ async function createAvatar(req: Request, res: Response): Promise<Response> {
     try {
         const userId = getUserIdFromReq(req);
         const { size, avatar_data, is_current = false } = req.body;
-
+        // console.log('Received avatar creation request:', req.body, 'User ID:', userId, avatar_data, size, is_current);
         // 验证必填字段
         if (!size || !avatar_data) {
             return sendError(res, '头像大小和数据为必填项');

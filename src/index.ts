@@ -20,10 +20,11 @@ import sleepCheckinRouters from './routes/checkin/sleepCheckinRouters.js';
 import exerciseCheckinRouters from './routes/checkin/exerciseCheckinRouters.js';
 import historyRouters from './routes/historyRouters.js';
 import characterAvatarRouters from './routes/avatarRouters.js';
+import pixelAvatarRouters from './routes/pixelAvatarRouters.js';
 import todolistRouters from './routes/todoListRouters.js';
 import taskCompletionHistoryRouters from './routes/taskCompletionHistoryRouters.js';
 import sleepQualityRouters from './routes/sleepQualityRouters.js';
-import avatarRouters from './routes/avatarRouters.js';
+// [DEPRECATED] avatarRouters 已替换为 pixelAvatarRouters（用户头像功能合并到 user_avatar 表）
 import { initializeSleepQualityModel } from './services/sleepQualityPredictService.js';
 
 import { getCurrentDateTimeString } from './util/dateTime.js';
@@ -35,6 +36,7 @@ const fixedOrigins = [
     'http://192.168.1.4:5174',
     'http://192.168.1.8:5173',
     'http://172.27.51.67:5173',
+    'http://192.168.2.119:5173',
     'https://cdesign-web.pages.dev',
     'https://cdw.zbyblq.xin',
     'https://localhost',
@@ -42,8 +44,8 @@ const fixedOrigins = [
     'https://sanatura.pages.dev',
     'https://sanatura.zbyblq.xin',
 ];
-// 匹配规则：以 https:// 开头，以 .cdesign-web.pages.dev 结尾
-const cfPattern = /^https:\/\/.*\.cdesign-web\.pages\.dev$/;
+// 匹配规则：以 https:// 开头，以 .sanatura.pages.dev 结尾，以便于不同版本cf部署的哈希子域名不被cors墙
+const cfPattern = /^https:\/\/.*\.sanatura\.pages\.dev$/;
 
 const app = express();
 const PORT = Number(env.port || 8080);
@@ -67,12 +69,12 @@ app.use((req, res, next) => { consoleLog(req); next(); });
 
 // 为 /api/tasks 添加专门的日志中间件
 app.use('/api/tasks', (req, res, next) => {
-    console.log('\n🚀 [/api/tasks 中间件] 请求进入');
+    console.log('\n[/api/tasks 中间件] 请求进入');
     console.log('METHOD:', req.method);
     console.log('URL:', req.originalUrl);
     console.log('Query:', req.query);
     console.log('Headers:', {
-        authorization: req.headers.authorization ? '✅ 存在' : '❌ 缺失',
+        authorization: req.headers.authorization ? '存在' : '缺失',
         'content-type': req.headers['content-type']
     });
     next();
@@ -83,7 +85,7 @@ app.use('/', rateLimit({ windowMs: 60000, max: 60, standardHeaders: true, legacy
 // 认证接口更严格的速率限制：每分钟每个IP最多10次请求（防暴力破解）
 app.use('/api/auth', rateLimit({ windowMs: 60000, max: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, message: '请求过于频繁，请稍后再试', data: null } }));
 app.use('/api/auth', authRoutes);
-app.use('/api/avatars/user', avatarRouters);
+app.use('/api/avatars/user', characterAvatarRouters);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ai-chat', aiChatRouters);
 app.use('/api/health-info', healthInfoRouters);
@@ -97,7 +99,7 @@ app.use('/api/history', historyRouters);
 app.use('/api/tasks', todolistRouters);
 app.use('/api/task-completion-history', taskCompletionHistoryRouters);
 app.use('/api/sleep-quality', sleepQualityRouters);
-app.use('/api/avatars', avatarRouters);
+app.use('/api/avatars', pixelAvatarRouters);
 
 // 健康检查端点
 app.get('/health', (_, res) => {

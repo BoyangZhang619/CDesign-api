@@ -83,7 +83,7 @@ async function register(req: Request, res: Response): Promise<Response> {
         const hashedPassword = await bcrypt.hash(password, 10);
         console.log('Registering user with hashed password:', hashedPassword);
         // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
-        await dbQuery('INSERT INTO user_account (credits, email, password_hash, nickname, avatar_id, phone_number, role, status, last_login_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())', [0, email, hashedPassword, name, avatar_id, phone_number, role, 'active']);
+        await dbQuery('INSERT INTO user_account (credits, uuid, email, password_hash, nickname, avatar_id, phone_number, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())', [0, crypto.randomUUID(), email, hashedPassword, name, avatar_id, phone_number, role, 'active']);
         return sendResult(res, '注册成功');
     } catch (err: unknown) {
         return sendError(res, (err as Error).message + " 注册失败", 500);
@@ -233,7 +233,10 @@ async function me(req: Request, res: Response): Promise<Response> {
     console.log('me userId:', userId);
     try {
         const [rows] = await dbQuery(
-            'SELECT * FROM user_account WHERE id = ? LIMIT 1',
+            `SELECT a.*, p.bio, p.website, p.location, p.gender, p.birthday
+             FROM user_account a
+             LEFT JOIN user_profile p ON a.id = p.user_id
+             WHERE a.id = ? LIMIT 1`,
             [userId]
         );
 
@@ -307,7 +310,7 @@ async function logoutAll(req: Request, res: Response): Promise<Response> {
 async function updateLastLoginTime(userId: number): Promise<void> {
     try {
         await dbQuery(
-            'UPDATE user_account SET last_login_at = NOW() WHERE id = ?',
+            'INSERT INTO user_login_info (user_id, first_login_time, last_login_time) VALUES (?, NOW(), NOW()) ON DUPLICATE KEY UPDATE last_login_time = NOW()',
             [userId]
         );
     } catch (err: unknown) {
@@ -323,9 +326,6 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
         avatar_id = null,
         phone_number = null,
         role = null,
-        bio = null,
-        website = null,
-        location = null
     } = req.body;
     const userId = req.user.userId ?? null;
     try {
@@ -360,6 +360,22 @@ async function updateUserInfo(req: Request, res: Response): Promise<Response> {
     } catch (err: unknown) {
         console.error('updateUserInfo error:', err);
         return sendError(res, '用户信息更新失败', 500);
+    }
+}
+
+// 更新 user_profile（bio / website / location）
+async function updateUserProfile(req: Request, res: Response): Promise<Response> {
+    const { bio = null, website = null, location = null } = req.body;
+    const userId = req.user.userId ?? null;
+    try {
+        await dbQuery(
+            'INSERT INTO user_profile (user_id, bio, website, location) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE bio = VALUES(bio), website = VALUES(website), location = VALUES(location)',
+            [userId, bio, website, location]
+        );
+        return sendResult(res, { message: '个人资料更新成功' });
+    } catch (err: unknown) {
+        console.error('updateUserProfile error:', err);
+        return sendError(res, '个人资料更新失败', 500);
     }
 }
 
@@ -484,5 +500,6 @@ export {
     SwitchAdmin,
     SwitchPassword,
     SwitchEmail,
-    updateUserInfo
+    updateUserInfo,
+    updateUserProfile,
 };

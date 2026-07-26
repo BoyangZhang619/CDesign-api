@@ -11,7 +11,8 @@ import {
     SwitchPassword,
     SwitchEmail,
     SwitchCommonUserInfo,
-    updateUserInfo
+    updateUserInfo,
+    updateUserProfile,
 } from '../controllers/authController.js';
 
 const router = express.Router();
@@ -48,5 +49,8 @@ router.post('/switch-common-user-info', authMiddleware, SwitchCommonUserInfo);
 
 // 更新用户信息（邮箱，名称，头像，手机号，身份）
 router.post('/update-user-info', authMiddleware, updateUserInfo);
+
+// 更新个人资料（个人简介、网站、所在地 → user_profile）
+router.post('/update-user-profile', authMiddleware, updateUserProfile);
 
 export default router;
