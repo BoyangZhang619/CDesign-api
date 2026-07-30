@@ -164,4 +164,12 @@ npm start
 
 ## 作者
 
-zyx, zby, zzl, wyh 等
+SanaTura Team
+
+## 项目简介
+Sanatura（青愈）是一个面向大学生群体的健康管理平台，提供日常打卡、饮食记录、运动追踪、睡眠分析、AI 健康助手等功能。
+
+## 技术栈
+- Node.js + Express 5 + TypeScript
+- MySQL 8.0
+- JWT 认证（access/refresh token rotation）
