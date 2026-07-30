@@ -157,14 +157,14 @@ function consoleLog(req: express.Request) {
     }
     // 开发环境记录完整请求信息
     console.log('=============================== NEW REQUEST ===============================');
-    console.log('TIME:', getCurrentDateTimeString());
-    console.log('METHOD:', req.method);
-    console.log('URL:', req.originalUrl);
-    console.log('ORIGIN:', req.headers.origin);
+    console.log('   TIME:', getCurrentDateTimeString());
+    console.log(' METHOD:', req.method);
+    console.log('    URL:', req.originalUrl);
+    console.log(' ORIGIN:', req.headers.origin);
     console.log('REFERER:', req.headers.referer);
-    console.log('HOST:', req.headers.host);
-    console.log('IP:', req.ip);
-    console.log('QUERY:', req.query);
-    console.log('BODY:', req.body);
+    console.log('   HOST:', req.headers.host);
+    console.log('     IP:', req.ip);
+    console.log('  QUERY:', req.query);
+    console.log('   BODY:', req.body);
     console.log('===========================================================================');
 }
