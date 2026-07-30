@@ -41,7 +41,7 @@ router.post('/switch-email', authMiddleware, SwitchEmail);
 // 切换密码
 router.post('/switch-password', authMiddleware, SwitchPassword);
 
-// 切换管理员状态(想通过这个接口来换简直是无稽之谈)
+// 管理员权限切换（需要数据库级别操作，API 仅返回错误）
 router.post('/switch-admin', authMiddleware, SwitchAdmin);
 
 // 切换基本用户信息

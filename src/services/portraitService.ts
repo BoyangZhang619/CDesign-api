@@ -650,7 +650,7 @@ ${checkinData.taskCompletionData && checkinData.taskCompletionData.length > 0 ? 
           exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
           mealScore: this.calculateMealScoreFromCheckin(checkinData.mealData),
           sleepScore: this.calculateSleepScoreFromCheckin(checkinData.sleepData),
-          metabolism: Math.round(Math.random() * 100),
+          metabolism: 50,  // 默认代谢值，待用户数据积累后由 AI 模型计算
           bmi: checkinData.bmi || 0,
           bmiStatus: this.calculateBmiStatus(checkinData.bmi || 0),
           cardioLevel: '待评估',
@@ -679,7 +679,7 @@ ${checkinData.taskCompletionData && checkinData.taskCompletionData.length > 0 ? 
           exerciseScore: this.calculateExerciseScoreFromCheckin(checkinData.exerciseData),
           mealScore: this.calculateMealScoreFromCheckin(checkinData.mealData),
           sleepScore: this.calculateSleepScoreFromCheckin(checkinData.sleepData),
-          metabolism: Math.round(Math.random() * 100),
+          metabolism: 50,  // 默认代谢值，待用户数据积累后由 AI 模型计算
           bmi: checkinData.bmi || 0,
           bmiStatus: this.calculateBmiStatus(checkinData.bmi || 0),
           cardioLevel: '待评估',

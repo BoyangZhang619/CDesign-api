@@ -410,9 +410,9 @@ async function SwitchCommonUserInfo(req: Request, res: Response): Promise<Respon
     });
 }
 
-// 切换admin权限（仅测试用 骗你的，真正有admin的是直接改数据库的，嘻嘻）
-async function SwitchAdmin(req: Request, res: Response): Promise<Response> {
-    return sendError(res, '就你也想获得admin权限？', 404);
+// 管理员权限切换（仅限数据库直接操作，不通过 API 暴露）
+async function SwitchAdmin(_req: Request, res: Response): Promise<Response> {
+    return sendError(res, '权限不足', 403);
 }
 
 // 切换密码
