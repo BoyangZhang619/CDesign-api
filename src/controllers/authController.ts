@@ -56,7 +56,7 @@ async function userAccountNormal(email: string): Promise<boolean> {
 async function register(req: Request, res: Response): Promise<Response> {
     try {
         const { email, password } = req.body;
-        const name = req.body.name || 'A guy/girl';
+        const name = req.body.name || '未命名用户';
         const avatar_id = req.body.avatar_id || null;
         const phone_number = req.body.phone_number || '';
         const role = req.body.role || 'student';
@@ -81,8 +81,6 @@ async function register(req: Request, res: Response): Promise<Response> {
             return sendError(res, '该邮箱已被注册', 400);
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        console.log('Registering user with hashed password:', hashedPassword);
-        // await dbQuery('INSERT INTO users (email, password_hash, credits, name) VALUES (?, ?, ?, ?)', [email, hashedPassword, 10000, name]);
         await dbQuery('INSERT INTO user_account (credits, uuid, email, password_hash, nickname, avatar_id, phone_number, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())', [0, crypto.randomUUID(), email, hashedPassword, name, avatar_id, phone_number, role, 'active']);
         return sendResult(res, '注册成功');
     } catch (err: unknown) {
@@ -94,7 +92,6 @@ async function register(req: Request, res: Response): Promise<Response> {
 async function login(req: Request, res: Response): Promise<Response> {
     try {
         const { email, password } = req.body;
-        console.log(req.body,req.user,env)
         if (!email || !password) {
             return sendError(res, '邮箱和密码不能为空', 400);
         }

@@ -32,8 +32,6 @@ async function CheckHealthInfo(req: Request, res: Response): Promise<Response> {
 // 插入健康信息
 async function InsertHealthInfo(req: Request, res: Response): Promise<Response> {
     const userId = req.user.userId;
-    console.log('[InsertHealthInfo] 用户ID:', userId);
-    console.log('[InsertHealthInfo] 请求体:', req.body);
     try {
         const response = await PortraitDAL.updateUserProfile(userId, req.body);
         if (!response) {

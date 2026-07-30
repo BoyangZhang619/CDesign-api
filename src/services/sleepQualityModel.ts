@@ -305,12 +305,4 @@ async function testModel() {
     }
 }
 
-// 如果直接运行此文件，执行测试
-if (import.meta.url === `file://${process.argv[1]}`) {
-    testModel().catch((error) => {
-        console.error("Fatal error:", error);
-        process.exit(1);
-    });
-}
-
 export { SleepQualityModel, PredictionInput, PredictionResult, ModelMetadata };

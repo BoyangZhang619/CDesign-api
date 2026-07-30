@@ -32,7 +32,7 @@ router.get('/me', authMiddleware, me);
 // 用户登出
 router.post('/logout', authMiddleware, logout);
 
-// 用户全部登出,jiushi所有refresh token失效
+// 用户全部登出，即所有 refresh token 失效
 router.post('/logout-all', authMiddleware, logoutAll);
 
 // 切换邮箱

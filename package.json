@@ -1,17 +1,17 @@
 {
-  "name": "cdesign-api",
+  "name": "sanatura-api",
   "version": "1.0.0",
   "description": "SanaTura 大学生健康管理平台 — 后端 API 服务",
-  "homepage": "https://github.com/BoyangZhang619/CDesign-api#readme",
+  "homepage": "https://github.com/BoyangZhang619/sanatura-api#readme",
   "bugs": {
-    "url": "https://github.com/BoyangZhang619/CDesign-api/issues"
+    "url": "https://github.com/BoyangZhang619/sanatura-api/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BoyangZhang619/CDesign-api.git"
+    "url": "git+https://github.com/BoyangZhang619/sanatura-api.git"
   },
   "license": "ISC",
-  "author": "zyx,zby,zzl,wyh etc",
+  "author": "SanaTura Team",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

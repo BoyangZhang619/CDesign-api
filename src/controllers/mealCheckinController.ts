@@ -35,7 +35,6 @@ async function insertCheckInRecord(req: Request, res: Response): Promise<Respons
         } = body;
         const userId = getUserIdFromReq(req);
         const dailyCheckinId = (todayCheckin as any)?.id;
-        console.log(userId, dailyCheckinId, meal_type, food_source, food_name, food_detail, calories, protein_g, fat_g, carbohydrate_g, fiber_g, sugar_g, meal_time, ai_recognition_flag, image_id);
 
         // 先插入记录到数据库
         const [result] = await dbQuery(

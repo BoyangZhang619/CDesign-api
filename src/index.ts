@@ -30,20 +30,13 @@ import { initializeSleepQualityModel } from './services/sleepQualityPredictServi
 import { getCurrentDateTimeString } from './util/dateTime.js';
 
 const fixedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://192.168.1.4:5173',
-    'http://192.168.1.4:5174',
-    'http://192.168.1.8:5173',
-    'http://172.27.51.67:5173',
-    'http://192.168.2.119:5173',
-    'https://cdesign-web.pages.dev',
-    'https://cdw.zbyblq.xin',
-    'https://localhost',
-    'http://localhost',
     'https://sanatura.pages.dev',
     'https://sanatura.zbyblq.xin',
 ];
+// 开发环境额外允许的源（不打包进生产配置）
+if (env.nodeEnv !== 'production') {
+    fixedOrigins.push('http://localhost:5173', 'http://localhost:5174', 'http://localhost');
+}
 // 匹配规则：以 https:// 开头，以 .sanatura.pages.dev 结尾，以便于不同版本cf部署的哈希子域名不被cors墙
 const cfPattern = /^https:\/\/.*\.sanatura\.pages\.dev$/;
 
@@ -106,7 +99,7 @@ app.get('/health', (_, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/', (_, res) => { res.send('why are you here?'); });
+app.get('/', (_, res) => { res.json({ service: 'Sanatura API', version: 'V1.0', status: 'running' }); });
 
 // 全局错误处理中间件（必须在所有路由之后注册）
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -165,6 +158,6 @@ function consoleLog(req: express.Request) {
     console.log('   HOST:', req.headers.host);
     console.log('     IP:', req.ip);
     console.log('  QUERY:', req.query);
-    console.log('   BODY:', req.body);
+    // 生产环境不记录请求体
     console.log('===========================================================================');
 }
